@@ -1,0 +1,34 @@
+﻿@model List<FormTemplateViewModel>
+
+@{
+    ViewData["Title"] = "Manage Form Templates";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<!-- Table to display form templates -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var template in Model)
+        {
+            <tr>
+                <td>@template.Name</td>
+                <td>@template.Description</td>
+                <td>
+                    <a href="@Url.Action("Edit", "Admin", new { id = template.TemplateId })" class="btn btn-primary">Edit</a>
+                    <a href="@Url.Action("Delete", "Admin", new { id = template.TemplateId })" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Button to create new form template -->
+<a href="@Url.Action("Create", "Admin")" class="btn btn-success">Create New Template</a>

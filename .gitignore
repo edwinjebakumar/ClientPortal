@@ -1,0 +1,8 @@
+bin
+obj
+.vs
+appsettings.json
+*.db
+*.rdb
+*.suo
+*.user

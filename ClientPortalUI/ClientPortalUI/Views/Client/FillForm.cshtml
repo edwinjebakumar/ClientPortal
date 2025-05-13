@@ -1,0 +1,26 @@
+﻿@model FormTemplateViewModel
+
+<h2>@Model.Name</h2>
+<form asp-action="SubmitForm" method="post">
+    @foreach (var field in Model.Fields)
+    {
+        <div class="form-group">
+            <label>@field.Label</label>
+            @* Render the control based on field type *@
+            @switch (field.FieldTypeName)
+            {
+                case "Text":
+                    @Html.TextBox(field.Label, null, new { @class = "form-control" })
+                    break;
+                case "Dropdown":
+                    @Html.DropDownList(field.Label, new SelectList(field.Options.Split(',')), new { @class = "form-control" })
+                    break;
+                default:
+                    @Html.TextBox(field.Label, null, new { @class = "form-control" })
+                    break;
+            }
+        </div>
+    }
+    <input type="hidden" name="AssignmentId" value="@Model.AssignmentId" />
+    <button type="submit" class="btn btn-primary">Submit Form</button>
+</form>

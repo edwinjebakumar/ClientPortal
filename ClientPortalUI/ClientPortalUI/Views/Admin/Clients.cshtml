@@ -1,0 +1,34 @@
+﻿@model List<ClientViewModel>
+
+@{
+    ViewData["Title"] = "Manage Clients";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<!-- Table to display clients -->
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var client in Model)
+        {
+            <tr>
+                <td>@client.Name</td>
+                <td>@client.Name</td>
+                <td>
+                    <a href="@Url.Action("EditClient", "Admin", new { id = client.Id })" class="btn btn-primary">Edit</a>
+                    <a href="@Url.Action("DeleteClient", "Admin", new { id = client.Id })" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- Button to create new client -->
+<a href="@Url.Action("CreateClient", "Admin")" class="btn btn-success">Create New Client</a>

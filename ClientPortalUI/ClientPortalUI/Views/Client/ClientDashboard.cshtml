@@ -1,0 +1,32 @@
+﻿@model List<FormAssignmentViewModel>
+@{
+    ViewData["Title"] = "Client Dashboard";
+}
+
+<h2>Client Dashboard</h2>
+<p>Welcome to your dashboard. You can access and submit assigned forms here.</p>
+
+<h2>Your Assigned Forms</h2>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Form Name</th>
+            <th>Description</th>
+            <th>Assigned On</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr>
+                <td>@item.FormTemplateName</td>
+                <td>@item.Description</td>
+                <td>@item.AssignedAt.ToString("g")</td>
+                <td>
+                    <a href="@Url.Action("FillForm", "ClientDashboard", new { assignmentId = item.Id })" class="btn btn-primary">Fill Form</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

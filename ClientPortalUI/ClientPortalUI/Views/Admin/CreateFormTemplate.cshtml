@@ -1,0 +1,92 @@
+﻿@model FormTemplateViewModel
+
+@{
+    ViewData["Title"] = "Create Form Template";
+}
+
+<h2>Create New Form Template</h2>
+
+<form asp-action="Create" method="post">
+    <div class="form-group mb-3">
+        <label for="Name">Template Name</label>
+        <input type="text" class="form-control" id="Name" name="Name" required />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="Description">Description</label>
+        <textarea class="form-control" id="Description" name="Description"></textarea>
+    </div>
+
+    <h4>Fields</h4>
+    <div id="fieldContainer">
+        @for (int i = 0; i < Model.Fields.Count; i++)
+        {
+            <div class="border p-3 mb-3">
+                <div class="form-group mb-2">
+                    <label for="Fields_@(i)__Label">Field Label</label>
+                    <input type="text" class="form-control" id="Fields_@(i)__Label" name="Fields[@i].Label" value="@Model.Fields[i].Label" required />
+                </div>
+
+                @{
+                    var field = Model.Fields[i];
+                    var selectedText = field.FieldTypeName == "Text" ? "selected" : "";
+                    var selectedNumber = field.FieldTypeName == "Number" ? "selected" : "";
+                    var selectedDropdown = field.FieldTypeName == "Dropdown" ? "selected" : "";
+                    var selectedDate = field.FieldTypeName == "Date" ? "selected" : "";
+                }
+
+                <div class="form-group mb-2">
+                    <label for="Fields_@(i)__FieldTypeName">Field Type</label>
+                    <select class="form-control" id="Fields_@(i)__FieldTypeName" name="Fields[@i].FieldTypeName" required>
+                        <option value="">-- Select Type --</option>
+                        <!option value="Text" @selectedText>Text</!option>
+                        <!option value="Number" @selectedNumber>Number</!option>
+                        <!option value="Dropdown" @selectedDropdown>Dropdown</!option>
+                        <!option value="Date" @selectedDate>Date</!option>
+                    </select>
+                </div>
+
+                <div class="form-group mb-2">
+                    <label for="Fields_@(i)__IsRequired">Required</label>
+                    <input type="checkbox" id="Fields_@(i)__IsRequired" name="Fields[@i].IsRequired" value="true" @(Model.Fields[i].IsRequired ? "checked" : "") />
+                </div>
+
+                <div class="form-group mb-2">
+                    <label for="Fields_@(i)__Options">Options (Comma Separated)</label>
+                    <input type="text" class="form-control" id="Fields_@(i)__Options" name="Fields[@i].Options" value="@Model.Fields[i].Options" />
+                </div>
+            </div>
+        }
+    </div>
+
+    <button type="submit" class="btn btn-primary">Create Template</button>
+</form>
+<script>
+    document.getElementById("AddFieldBtn").addEventListener("click", function() {
+        let fieldsContainer = document.getElementById("FieldsContainer");
+        let newFieldDiv = document.createElement("div");
+        newFieldDiv.classList.add("form-group");
+
+        newFieldDiv.innerHTML = `
+            <label for="Fields_Label">Field Label</label>
+            <input type="text" class="form-control" name="Fields[${fieldsContainer.children.length}].Label" required />
+
+            <label for="Fields_FieldTypeName">Field Type</label>
+            <select class="form-control" name="Fields[${fieldsContainer.children.length}].FieldTypeName" required>
+                <option value="">Select Field Type</option>
+    @foreach (var fieldType in ViewBag.FieldTypes as List<ClientPortalUI.Models.FieldTypeViewModel>)
+    {
+                        <option value="@fieldType.Name">@fieldType.Name</option>
+    }
+            </select>
+
+            <label for="Fields_IsRequired">Is Required?</label>
+            <input type="checkbox" name="Fields[${fieldsContainer.children.length}].IsRequired" />
+
+            <label for="Fields_Options">Options (JSON Format)</label>
+            <input type="text" class="form-control" name="Fields[${fieldsContainer.children.length}].Options" />
+        `;
+
+        fieldsContainer.appendChild(newFieldDiv);
+    });
+</script>
