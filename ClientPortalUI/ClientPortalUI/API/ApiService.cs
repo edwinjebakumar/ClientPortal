@@ -31,7 +31,7 @@ namespace ClientPortalUI.API
             }
             catch (Exception ex)
             {
-                // Log exception as needed
+                _logger.LogError(ex, "Error retrieving form assignments for client {ClientId}", clientId);
                 throw new ApplicationException("Error retrieving form assignments.", ex);
             }
         }
@@ -48,12 +48,12 @@ namespace ClientPortalUI.API
             }
             catch (Exception ex)
             {
-                // Log exception as needed
+                _logger.LogError(ex, "Error retrieving form template {AssignmentId}", assignmentId);
                 throw new ApplicationException("Error retrieving form template.", ex);
             }
         }
 
-        // Submits a form submission. Depending on backend logic, this can create or update a submission.
+        // Submits a form submission
         public async Task<SubmissionResponseViewModel> SubmitFormAsync(SubmissionViewModel submission)
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
@@ -68,17 +68,20 @@ namespace ClientPortalUI.API
                 }
                 else
                 {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Error submitting form. Status: {StatusCode}, Error: {Error}", 
+                        response.StatusCode, errorContent);
                     throw new ApplicationException($"Error submitting form. Status code: {response.StatusCode}");
                 }
             }
             catch (Exception ex)
             {
-                // Log exception as needed
+                _logger.LogError(ex, "Error submitting form");
                 throw new ApplicationException("Error submitting form.", ex);
             }
         }
 
-        // Retrieves activity history for a given submission (by submission id)
+        // Retrieves activity history for a given submission
         public async Task<List<ActivityHistoryViewModel>> GetActivityHistoryBySubmissionAsync(int submissionId)
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
@@ -90,12 +93,12 @@ namespace ClientPortalUI.API
             }
             catch (Exception ex)
             {
-                // Log exception as needed
+                _logger.LogError(ex, "Error retrieving activity history for submission {SubmissionId}", submissionId);
                 throw new ApplicationException("Error retrieving activity history for the submission.", ex);
             }
         }
 
-        // Retrieves activity history by user id (to see all actions performed by a user)
+        // Retrieves activity history by user id
         public async Task<List<ActivityHistoryViewModel>> GetActivityHistoryByUserAsync(string userId)
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
@@ -107,7 +110,7 @@ namespace ClientPortalUI.API
             }
             catch (Exception ex)
             {
-                // Log exception as needed
+                _logger.LogError(ex, "Error retrieving activity history for user {UserId}", userId);
                 throw new ApplicationException("Error retrieving activity history for the user.", ex);
             }
         }
@@ -119,7 +122,7 @@ namespace ClientPortalUI.API
             {
                 var client = _httpClientFactory.CreateClient("ApiClient");
                 var endpoint = "FieldTypes";
-                
+
                 var response = await client.GetAsync(endpoint);
                 if (!response.IsSuccessStatusCode)
                 {
@@ -148,7 +151,7 @@ namespace ClientPortalUI.API
                 _logger.LogInformation("Creating form template: {TemplateName}", formTemplate.Name);
 
                 var response = await client.PostAsJsonAsync("FormTemplates", formTemplate);
-                
+
                 if (response.IsSuccessStatusCode)
                 {
                     _logger.LogInformation("Successfully created form template: {TemplateName}", formTemplate.Name);

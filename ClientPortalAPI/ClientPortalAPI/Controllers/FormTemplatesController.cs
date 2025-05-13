@@ -67,7 +67,6 @@ namespace ClientPortalAPI.Controllers
 
         // POST: api/FormTemplates
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<FormTemplateDTO>> CreateFormTemplate(FormTemplateDTO templateDto)
         {
             try
