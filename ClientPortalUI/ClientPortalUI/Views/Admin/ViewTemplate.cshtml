@@ -1,0 +1,88 @@
+@model FormTemplateViewModel
+
+@{
+    ViewData["Title"] = "View Template";
+}
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h1>@Model.Name</h1>
+            @if (Model.IsBaseTemplate)
+            {
+                <span class="badge bg-primary">Base Template</span>
+            }
+        </div>
+        <div class="col text-end">
+            @if (!Model.IsBaseTemplate)
+            {
+                <a href="@Url.Action("EditTemplate", "Admin", new { id = Model.TemplateId })" class="btn btn-primary">
+                    <i class="bi bi-pencil"></i> Edit Template
+                </a>
+            }
+            <a href="@Url.Action("FormTemplates", "Admin")" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Templates
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.Description))
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Description</h5>
+                <p class="card-text">@Model.Description</p>
+            </div>
+        </div>
+    }
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Form Fields</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Label</th>
+                            <th>Type</th>
+                            <th>Required</th>
+                            <th>Options</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in Model.Fields)
+                        {
+                            <tr>
+                                <td>@field.Label</td>
+                                <td>@field.FieldTypeName</td>
+                                <td>
+                                    @if (field.IsRequired)
+                                    {
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    }
+                                    else
+                                    {
+                                        <i class="bi bi-circle text-muted"></i>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(field.Options))
+                                    {
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach (var option in field.Options.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                            {
+                                                <li>@option.Trim()</li>
+                                            }
+                                        </ul>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,19 +1,127 @@
-﻿@{
+﻿@model List<FormTemplateViewModel>
+
+@{
     ViewData["Title"] = "Admin Dashboard";
 }
 
-<h2 class="mb-4">Admin Dashboard</h2>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>Admin Dashboard</h2>
+        </div>
+        <div class="col text-end">
+            <a class="btn btn-success" asp-action="CreateFormTemplate">
+                <i class="bi bi-plus-circle"></i> Create New Template
+            </a>
+        </div>
+    </div>
 
-@if (TempData["Message"] != null)
-{
-    <div class="alert alert-success">@TempData["Message"]</div>
-}
-@if (TempData["Error"] != null)
-{
-    <div class="alert alert-danger">@TempData["Error"]</div>
-}
+    @if (TempData["Message"] != null)
+    {
+        <div class="alert alert-success">@TempData["Message"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
 
-<div class="d-flex flex-column gap-3">
-    <a class="btn btn-primary" asp-action="CreateFormTemplate">Create New Form Template</a>
-    <a class="btn btn-secondary" asp-controller="FormAssignment" asp-action="Index">Assign Templates to Clients</a>
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Form Templates</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Template Name</th>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                    <th>Fields</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model != null && Model.Any())
+                                {
+                                    @foreach (var template in Model)
+                                    {
+                                        <tr>
+                                            <td>
+                                                @template.Name
+                                            </td>
+                                            <td>@template.Description</td>
+                                            <td>
+                                                @if (template.IsBaseTemplate)
+                                                {
+                                                    <span class="badge bg-primary">Base Template</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-secondary">Custom Template</span>
+                                                }
+                                            </td>
+                                            <td>@template.Fields.Count</td>
+                                            <td>
+                                                <div class="btn-group">
+                                                    <a href="@Url.Action("ViewTemplate", "Admin", new { id = template.TemplateId })" 
+                                                       class="btn btn-info btn-sm" title="View Template">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    @if (!template.IsBaseTemplate)
+                                                    {
+                                                        <a href="@Url.Action("EditTemplate", "Admin", new { id = template.TemplateId })" 
+                                                           class="btn btn-primary btn-sm" title="Edit Template">
+                                                            <i class="bi bi-pencil"></i>
+                                                        </a>
+                                                        <button onclick="confirmDelete(@template.TemplateId)" 
+                                                                class="btn btn-danger btn-sm" title="Delete Template">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    }
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center">No templates found.</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Template Assignments</h5>
+                </div>
+                <div class="card-body">
+                    <a class="btn btn-primary" asp-controller="FormAssignment" asp-action="Index">
+                        <i class="bi bi-link"></i> Manage Template Assignments
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+@section Scripts {
+    <script>
+        function confirmDelete(templateId) {
+            if (confirm('Are you sure you want to delete this template? This action cannot be undone.')) {
+                window.location.href = '@Url.Action("DeleteTemplate", "Admin")?id=' + templateId;
+            }
+        }
+    </script>
+}

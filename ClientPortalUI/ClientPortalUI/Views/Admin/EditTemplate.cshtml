@@ -1,0 +1,173 @@
+@model FormTemplateViewModel
+
+@{
+    ViewData["Title"] = "Edit Template";
+}
+
+<div class="container">
+    <h1>Edit Template</h1>
+
+    <form id="editTemplateForm" method="post">
+        <input type="hidden" asp-for="TemplateId" />
+        <input type="hidden" asp-for="IsBaseTemplate" />
+
+        <div class="mb-3">
+            <label asp-for="Name" class="form-label">Template Name</label>
+            <input asp-for="Name" class="form-control" required />
+            <span asp-validation-for="Name" class="text-danger"></span>
+        </div>
+
+        <div class="mb-3">
+            <label asp-for="Description" class="form-label">Description</label>
+            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+            <span asp-validation-for="Description" class="text-danger"></span>
+        </div>
+
+        <div id="fieldsContainer" class="mb-4">
+            <h3>Form Fields</h3>
+            <div id="formFields" class="list-group mb-3">
+                @for (var i = 0; i < Model.Fields.Count; i++)
+                {
+                    <div class="list-group-item field-item" data-field-index="@i">
+                        <div class="row g-3">
+                            <input type="hidden" asp-for="Fields[i].Id" />
+                            
+                            <div class="col-md-4">
+                                <label asp-for="Fields[i].Label" class="form-label">Label</label>
+                                <input asp-for="Fields[i].Label" class="form-control" required />
+                                <span asp-validation-for="Fields[i].Label" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label asp-for="Fields[i].FieldTypeName" class="form-label">Field Type</label>
+                                <select asp-for="Fields[i].FieldTypeName" class="form-select" required>
+                                    <option value="">Select Type</option>
+                                </select>
+                                <span asp-validation-for="Fields[i].FieldTypeName" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-3">
+                                <label asp-for="Fields[i].Options" class="form-label">Options</label>
+                                <input asp-for="Fields[i].Options" class="form-control" />
+                                <span asp-validation-for="Fields[i].Options" class="text-danger"></span>
+                            </div>
+
+                            <div class="col-md-1">
+                                <label asp-for="Fields[i].IsRequired" class="form-label">Required</label>
+                                <div class="form-check mt-2">
+                                    <input asp-for="Fields[i].IsRequired" class="form-check-input" />
+                                </div>
+                            </div>
+
+                            <div class="col-md-1">
+                                <label class="form-label">Action</label>
+                                <button type="button" class="btn btn-danger btn-sm delete-field" onclick="removeField(this)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <button type="button" class="btn btn-secondary" onclick="addNewField()">
+                <i class="bi bi-plus"></i> Add Field
+            </button>
+        </div>
+
+        <div class="mb-3">
+            <a href="@Url.Action("FormTemplates", "Admin")" class="btn btn-secondary">Cancel</a>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        let fieldTypes = [];
+        let fieldIndex = @Model.Fields.Count;
+
+        // Fetch field types when the page loads
+        $(document).ready(function() {
+            fetchFieldTypes();
+        });
+
+        function fetchFieldTypes() {
+            $.get('@Url.Action("GetFieldTypes", "Admin")', function(data) {
+                fieldTypes = data;
+                populateFieldTypeDropdowns();
+            });
+        }
+
+        function populateFieldTypeDropdowns() {
+            const options = fieldTypes.map(type => 
+                `<option value="${type.name}">${type.name}</option>`
+            ).join('');
+
+            $('select[name$=".FieldTypeName"]').each(function() {
+                const currentValue = $(this).val();
+                $(this).html('<option value="">Select Type</option>' + options);
+                $(this).val(currentValue);
+            });
+        }
+
+        function addNewField() {
+            const template = `
+                <div class="list-group-item field-item" data-field-index="${fieldIndex}">
+                    <div class="row g-3">
+                        <input type="hidden" name="Fields[${fieldIndex}].Id" value="0" />
+                        
+                        <div class="col-md-4">
+                            <label class="form-label">Label</label>
+                            <input name="Fields[${fieldIndex}].Label" class="form-control" required />
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Field Type</label>
+                            <select name="Fields[${fieldIndex}].FieldTypeName" class="form-select" required>
+                                <option value="">Select Type</option>
+                                ${fieldTypes.map(type => `<option value="${type.name}">${type.name}</option>`).join('')}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label">Options</label>
+                            <input name="Fields[${fieldIndex}].Options" class="form-control" />
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Required</label>
+                            <div class="form-check mt-2">
+                                <input type="checkbox" name="Fields[${fieldIndex}].IsRequired" class="form-check-input" />
+                            </div>
+                        </div>
+
+                        <div class="col-md-1">
+                            <label class="form-label">Action</label>
+                            <button type="button" class="btn btn-danger btn-sm delete-field" onclick="removeField(this)">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+
+            $('#formFields').append(template);
+            fieldIndex++;
+        }
+
+        function removeField(button) {
+            if (confirm('Are you sure you want to remove this field?')) {
+                $(button).closest('.field-item').remove();
+            }
+        }
+
+        // Form validation and submission
+        $('#editTemplateForm').on('submit', function(e) {
+            if (!this.checkValidity()) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            $(this).addClass('was-validated');
+        });
+    </script>
+}

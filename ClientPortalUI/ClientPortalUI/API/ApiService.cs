@@ -169,5 +169,78 @@ namespace ClientPortalUI.API
                 throw new ApplicationException("Error creating form template.", ex);
             }
         }
+
+        // Retrieves all form templates
+        public async Task<List<FormTemplateViewModel>> GetFormTemplatesAsync()
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = "FormTemplates";
+            try
+            {
+                var templates = await client.GetFromJsonAsync<List<FormTemplateViewModel>>(endpoint);
+                return templates ?? new List<FormTemplateViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving form templates");
+                throw new ApplicationException("Error retrieving form templates.", ex);
+            }
+        }
+
+        // Updates an existing form template
+        public async Task<bool> UpdateFormTemplateAsync(FormTemplateViewModel template)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"FormTemplates/{template.TemplateId}";
+            try
+            {
+                _logger.LogInformation("Updating form template: {TemplateName}", template.Name);
+
+                var response = await client.PutAsJsonAsync(endpoint, template);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Successfully updated form template: {TemplateName}", template.Name);
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to update form template. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating form template: {TemplateName}", template.Name);
+                throw new ApplicationException("Error updating form template.", ex);
+            }
+        }
+
+        // Deletes a form template
+        public async Task<bool> DeleteFormTemplateAsync(int templateId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"FormTemplates/{templateId}";
+            try
+            {
+                _logger.LogInformation("Deleting form template: {TemplateId}", templateId);
+
+                var response = await client.DeleteAsync(endpoint);
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Successfully deleted form template: {TemplateId}", templateId);
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to delete form template. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting form template: {TemplateId}", templateId);
+                throw new ApplicationException("Error deleting form template.", ex);
+            }
+        }
     }
 }

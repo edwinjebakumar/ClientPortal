@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClientPortalUI.Models
-{
-    public class FormTemplateViewModel
+{    public class FormTemplateViewModel
     {
         public int AssignmentId { get; set; }
         public int TemplateId { get; set; }
@@ -15,6 +14,8 @@ namespace ClientPortalUI.Models
 
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
         public string Description { get; set; } = string.Empty;
+
+        public bool IsBaseTemplate { get; set; }
 
         public List<FormFieldViewModel> Fields { get; set; } = new();
     }
