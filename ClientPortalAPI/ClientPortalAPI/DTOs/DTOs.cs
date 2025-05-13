@@ -22,7 +22,6 @@ namespace ClientPortalAPI.DTOs
             public int TemplateId { get; set; }
             public string Name { get; set; } = string.Empty;
             public string? Description { get; set; }
-            public int AssignmentId { get; set; }  // If you want to track the assignment along with template details
             public List<FormFieldDTO> Fields { get; set; } = new();
         }
 
@@ -31,9 +30,9 @@ namespace ClientPortalAPI.DTOs
         {
             public int FieldId { get; set; }
             public string Label { get; set; } = string.Empty;
-            public string FieldTypeName { get; set; } = string.Empty;  // e.g. "Text", "Dropdown", etc.
-            public string? Options { get; set; }   // For dropdowns or radio (could be comma-separated or JSON)
+            public string FieldTypeName { get; set; } = string.Empty;
             public bool IsRequired { get; set; }
+            public string? Options { get; set; }
         }
 
         // DTO for receiving a form submission from the UI

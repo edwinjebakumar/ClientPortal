@@ -12,15 +12,17 @@ namespace ClientPortalAPI.Controllers
     public class FormTemplatesController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<FormTemplatesController> _logger;
 
-        public FormTemplatesController(ApplicationDbContext context)
+        public FormTemplatesController(ApplicationDbContext context, ILogger<FormTemplatesController> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         // GET: api/FormTemplates
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<FormTemplate>>> GetFormTemplates()
+        public async Task<ActionResult<IEnumerable<FormTemplateDTO>>> GetFormTemplates()
         {
             var formTemplates = await _context.FormTemplates
                                      .Select(t => new FormTemplateDTO
@@ -35,18 +37,32 @@ namespace ClientPortalAPI.Controllers
 
         // GET: api/FormTemplates/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<FormTemplate>> GetFormTemplate(int id)
+        public async Task<ActionResult<FormTemplateDTO>> GetFormTemplate(int id)
         {
             var template = await _context.FormTemplates
-                                         .Include(ft => ft.Fields)
-                                         .FirstOrDefaultAsync(ft => ft.Id == id);
+                                     .Include(ft => ft.Fields)
+                                     .ThenInclude(f => f.FieldType)
+                                     .FirstOrDefaultAsync(ft => ft.Id == id);
 
             if (template == null)
             {
                 return NotFound();
             }
 
-            return template;
+            return new FormTemplateDTO
+            {
+                TemplateId = template.Id,
+                Name = template.Name,
+                Description = template.Description,
+                Fields = template.Fields.Select(f => new FormFieldDTO
+                {
+                    FieldId = f.Id,
+                    Label = f.Label,
+                    FieldTypeName = f.FieldType.Name,
+                    IsRequired = f.IsRequired,
+                    Options = f.OptionsJson
+                }).ToList()
+            };
         }
 
         // POST: api/FormTemplates
@@ -54,18 +70,69 @@ namespace ClientPortalAPI.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<FormTemplateDTO>> CreateFormTemplate(FormTemplateDTO templateDto)
         {
-            var template = new FormTemplate
+            try
             {
-                Name = templateDto.Name,
-                Description = templateDto.Description
-            };
+                _logger.LogInformation("Creating template: {TemplateName}", templateDto.Name);
 
-            _context.FormTemplates.Add(template);
-            await _context.SaveChangesAsync();
+                var template = new FormTemplate
+                {
+                    Name = templateDto.Name,
+                    Description = templateDto.Description,
+                    Fields = new List<FormField>()
+                };
 
-            return CreatedAtAction(nameof(GetFormTemplates), new { id = template.Id }, template);
+                // Process fields
+                foreach (var fieldDto in templateDto.Fields)
+                {
+                    var fieldType = await _context.FieldTypes
+                        .FirstOrDefaultAsync(ft => ft.Name == fieldDto.FieldTypeName);
+
+                    if (fieldType == null)
+                    {
+                        return BadRequest($"Invalid field type: {fieldDto.FieldTypeName}");
+                    }
+
+                    var field = new FormField
+                    {
+                        Label = fieldDto.Label,
+                        FieldType = fieldType,
+                        IsRequired = fieldDto.IsRequired,
+                        OptionsJson = fieldDto.Options
+                    };
+
+                    template.Fields.Add(field);
+                }
+
+                _context.FormTemplates.Add(template);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Successfully created template: {TemplateName} with {FieldCount} fields", 
+                    templateDto.Name, templateDto.Fields.Count);
+
+                return CreatedAtAction(
+                    nameof(GetFormTemplate), 
+                    new { id = template.Id }, 
+                    new FormTemplateDTO
+                    {
+                        TemplateId = template.Id,
+                        Name = template.Name,
+                        Description = template.Description,
+                        Fields = template.Fields.Select(f => new FormFieldDTO
+                        {
+                            FieldId = f.Id,
+                            Label = f.Label,
+                            FieldTypeName = f.FieldType.Name,
+                            IsRequired = f.IsRequired,
+                            Options = f.OptionsJson
+                        }).ToList()
+                    });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating template: {TemplateName}", templateDto.Name);
+                return StatusCode(500, "An error occurred while creating the form template.");
+            }
         }
-
 
         // PUT: api/FormTemplates/5
         [HttpPut("{id}")]
@@ -118,5 +185,4 @@ namespace ClientPortalAPI.Controllers
         private bool FormTemplateExists(int id) =>
             _context.FormTemplates.Any(ft => ft.Id == id);
     }
-
 }

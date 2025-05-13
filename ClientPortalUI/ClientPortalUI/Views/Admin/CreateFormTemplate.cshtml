@@ -1,92 +1,353 @@
 ﻿@model FormTemplateViewModel
-
 @{
     ViewData["Title"] = "Create Form Template";
 }
 
-<h2>Create New Form Template</h2>
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Create New Form Template</h2>
 
-<form asp-action="Create" method="post">
-    <div class="form-group mb-3">
-        <label for="Name">Template Name</label>
-        <input type="text" class="form-control" id="Name" name="Name" required />
-    </div>
-
-    <div class="form-group mb-3">
-        <label for="Description">Description</label>
-        <textarea class="form-control" id="Description" name="Description"></textarea>
-    </div>
-
-    <h4>Fields</h4>
-    <div id="fieldContainer">
-        @for (int i = 0; i < Model.Fields.Count; i++)
-        {
-            <div class="border p-3 mb-3">
-                <div class="form-group mb-2">
-                    <label for="Fields_@(i)__Label">Field Label</label>
-                    <input type="text" class="form-control" id="Fields_@(i)__Label" name="Fields[@i].Label" value="@Model.Fields[i].Label" required />
-                </div>
-
-                @{
-                    var field = Model.Fields[i];
-                    var selectedText = field.FieldTypeName == "Text" ? "selected" : "";
-                    var selectedNumber = field.FieldTypeName == "Number" ? "selected" : "";
-                    var selectedDropdown = field.FieldTypeName == "Dropdown" ? "selected" : "";
-                    var selectedDate = field.FieldTypeName == "Date" ? "selected" : "";
-                }
-
-                <div class="form-group mb-2">
-                    <label for="Fields_@(i)__FieldTypeName">Field Type</label>
-                    <select class="form-control" id="Fields_@(i)__FieldTypeName" name="Fields[@i].FieldTypeName" required>
-                        <option value="">-- Select Type --</option>
-                        <!option value="Text" @selectedText>Text</!option>
-                        <!option value="Number" @selectedNumber>Number</!option>
-                        <!option value="Dropdown" @selectedDropdown>Dropdown</!option>
-                        <!option value="Date" @selectedDate>Date</!option>
-                    </select>
-                </div>
-
-                <div class="form-group mb-2">
-                    <label for="Fields_@(i)__IsRequired">Required</label>
-                    <input type="checkbox" id="Fields_@(i)__IsRequired" name="Fields[@i].IsRequired" value="true" @(Model.Fields[i].IsRequired ? "checked" : "") />
-                </div>
-
-                <div class="form-group mb-2">
-                    <label for="Fields_@(i)__Options">Options (Comma Separated)</label>
-                    <input type="text" class="form-control" id="Fields_@(i)__Options" name="Fields[@i].Options" value="@Model.Fields[i].Options" />
+    <form asp-action="CreateFormTemplate" method="post" id="formTemplateForm" class="needs-validation" novalidate>
+        <div class="row">
+            <!-- Available Field Types Panel -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Available Fields</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="availableFields" class="field-types-list">
+                            @foreach (var fieldType in ViewBag.FieldTypes)
+                            {
+                                <div class="field-type-item mb-2" data-field-type="@fieldType.Name">
+                                    <div class="card">
+                                        <div class="card-body py-2 px-3">
+                                            <i class="bi @GetFieldTypeIcon(fieldType.Name)"></i>
+                                            <span class="ms-2">@fieldType.Name</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="text-muted small mt-3">
+                            <i class="bi bi-info-circle"></i> Drag fields to build your form
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <!-- Form Building Area -->
+            <div class="col-md-9">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label asp-for="Name" class="form-label required">Template Name</label>
+                            <input asp-for="Name" class="form-control" required />
+                            <div class="invalid-feedback">Please enter a template name</div>
+                        </div>
+
+                        <div class="form-group mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Form Fields</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="formFields" class="form-fields-list">
+                            @for (int i = 0; i < Model.Fields.Count; i++)
+                            {
+                                <div class="field-item card mb-3" data-field-type="@Model.Fields[i].FieldTypeName">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-grip-vertical handle me-2"></i>
+                                                <i class="bi @GetFieldTypeIcon(Model.Fields[i].FieldTypeName) me-2"></i>
+                                                <h6 class="mb-0">@Model.Fields[i].FieldTypeName Field</h6>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-field">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-2">
+                                                    <label class="form-label required">Field Label</label>
+                                                    <input type="text" class="form-control" name="Fields[@i].Label" 
+                                                           value="@Model.Fields[i].Label" required />
+                                                    <div class="invalid-feedback">Please enter a field label</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="hidden" name="Fields[@i].FieldTypeName" value="@Model.Fields[i].FieldTypeName" />
+                                                <div class="form-check mt-4">
+                                                    <input type="checkbox" class="form-check-input" 
+                                                           name="Fields[@i].IsRequired" value="true" 
+                                                           @(Model.Fields[i].IsRequired ? "checked" : "") />
+                                                    <label class="form-check-label">Required Field</label>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        @if (Model.Fields[i].FieldTypeName == "Dropdown")
+                                        {
+                                            <div class="row mt-2">
+                                                <div class="col-12">
+                                                    <div class="form-group">
+                                                        <label class="form-label required">Options (comma-separated)</label>
+                                                        <input type="text" class="form-control" name="Fields[@i].Options" 
+                                                               value="@Model.Fields[i].Options" required
+                                                               placeholder="Option1, Option2, Option3" />
+                                                        <div class="invalid-feedback">Please enter options for the dropdown</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div id="noFieldsMessage" class="alert alert-info @(Model.Fields.Any() ? "d-none" : "")" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Drag fields from the left panel to start building your form
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-2"></i>Create Template
+                    </button>
+                    <a asp-action="AdminDashboard" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Styles {
+    <style>
+        .required:after {
+            content: " *";
+            color: red;
         }
-    </div>
+        .field-type-item {
+            cursor: move;
+            user-select: none;
+        }
+        .field-type-item:hover {
+            transform: translateY(-2px);
+            transition: transform 0.2s;
+        }
+        .field-item {
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .field-item:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .field-item .handle {
+            cursor: move;
+            color: #6c757d;
+        }
+        .sortable-ghost {
+            opacity: 0.5;
+            background-color: #e9ecef;
+        }
+        .field-types-list {
+            min-height: 400px;
+        }
+        .form-fields-list {
+            min-height: 200px;
+            padding: 10px 0;
+        }
+    </style>
+}
 
-    <button type="submit" class="btn btn-primary">Create Template</button>
-</form>
-<script>
-    document.getElementById("AddFieldBtn").addEventListener("click", function() {
-        let fieldsContainer = document.getElementById("FieldsContainer");
-        let newFieldDiv = document.createElement("div");
-        newFieldDiv.classList.add("form-group");
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            let fieldCount = @Model.Fields.Count;
 
-        newFieldDiv.innerHTML = `
-            <label for="Fields_Label">Field Label</label>
-            <input type="text" class="form-control" name="Fields[${fieldsContainer.children.length}].Label" required />
+            // Initialize Sortable for available fields (drag source)
+            new Sortable(document.getElementById('availableFields'), {
+                group: {
+                    name: 'fields',
+                    pull: 'clone',
+                    put: false
+                },
+                sort: false,
+                animation: 150
+            });
 
-            <label for="Fields_FieldTypeName">Field Type</label>
-            <select class="form-control" name="Fields[${fieldsContainer.children.length}].FieldTypeName" required>
-                <option value="">Select Field Type</option>
-    @foreach (var fieldType in ViewBag.FieldTypes as List<ClientPortalUI.Models.FieldTypeViewModel>)
+            // Initialize Sortable for form fields (drop target)
+            new Sortable(document.getElementById('formFields'), {
+                group: {
+                    name: 'fields',
+                    pull: false,
+                    put: true
+                },
+                handle: '.handle',
+                animation: 150,
+                onAdd: function (evt) {
+                    const item = evt.item;
+                    const fieldType = item.dataset.fieldType;
+                    const newFieldHtml = createFieldHtml(fieldType, fieldCount++);
+                    item.outerHTML = newFieldHtml;
+                    updateNoFieldsMessage();
+                }
+            });
+
+            // Form validation
+            const form = document.getElementById('formTemplateForm');
+            form.addEventListener('submit', function (event) {
+                if (!validateForm()) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            });
+
+            // Remove field
+            $(document).on('click', '.remove-field', function() {
+                $(this).closest('.field-item').remove();
+                updateNoFieldsMessage();
+                reorderFields();
+            });
+
+            // Helper functions
+            function createFieldHtml(fieldType, index) {
+                const html = `
+                    <div class="field-item card mb-3" data-field-type="${fieldType}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-grip-vertical handle me-2"></i>
+                                    <i class="bi ${getFieldTypeIcon(fieldType)} me-2"></i>
+                                    <h6 class="mb-0">${fieldType} Field</h6>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-danger remove-field">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-group mb-2">
+                                        <label class="form-label required">Field Label</label>
+                                        <input type="text" class="form-control" name="Fields[${index}].Label" required />
+                                        <div class="invalid-feedback">Please enter a field label</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="hidden" name="Fields[${index}].FieldTypeName" value="${fieldType}" />
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" class="form-check-input" 
+                                               name="Fields[${index}].IsRequired" value="true" />
+                                        <label class="form-check-label">Required Field</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            ${fieldType === 'Dropdown' ? createDropdownOptionsHtml(index) : ''}
+                        </div>
+                    </div>
+                `;
+                return html;
+            }
+
+            function createDropdownOptionsHtml(index) {
+                return `
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="form-group">
+                                <label class="form-label required">Options (comma-separated)</label>
+                                <input type="text" class="form-control" name="Fields[${index}].Options" required
+                                       placeholder="Option1, Option2, Option3" />
+                                <div class="invalid-feedback">Please enter options for the dropdown</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            function getFieldTypeIcon(fieldType) {
+                switch (fieldType.toLowerCase()) {
+                    case 'text': return 'bi-input-cursor-text';
+                    case 'number': return 'bi-123';
+                    case 'date': return 'bi-calendar';
+                    case 'dropdown': return 'bi-list';
+                    case 'checkbox': return 'bi-check-square';
+                    case 'radio': return 'bi-record-circle';
+                    case 'email': return 'bi-envelope';
+                    case 'phone': return 'bi-telephone';
+                    default: return 'bi-input-cursor';
+                }
+            }
+
+            function updateNoFieldsMessage() {
+                const hasFields = $('#formFields').children('.field-item').length > 0;
+                $('#noFieldsMessage').toggleClass('d-none', hasFields);
+            }
+
+            function reorderFields() {
+                $('.field-item').each(function(index) {
+                    $(this).find('input, select').each(function() {
+                        const name = $(this).attr('name');
+                        if (name) {
+                            $(this).attr('name', name.replace(/\[\d+\]/, `[${index}]`));
+                        }
+                    });
+                });
+            }
+
+            function validateForm() {
+                let isValid = form.checkValidity();
+                
+                // Check if there are any fields
+                if ($('#formFields').children('.field-item').length === 0) {
+                    alert('Please add at least one field to the form template.');
+                    return false;
+                }
+
+                // Validate dropdown options
+                $('.field-item[data-field-type="Dropdown"]').each(function() {
+                    const options = $(this).find('input[name$="].Options"]').val();
+                    if (!options) {
+                        isValid = false;
+                        $(this).find('input[name$="].Options"]')[0].setCustomValidity('Please enter options');
+                    } else {
+                        $(this).find('input[name$="].Options"]')[0].setCustomValidity('');
+                    }
+                });
+
+                return isValid;
+            }
+        });
+    </script>
+}
+
+@functions {
+    private string GetFieldTypeIcon(string fieldType)
     {
-                        <option value="@fieldType.Name">@fieldType.Name</option>
+        switch (fieldType.ToLower())
+        {
+            case "text": return "bi-input-cursor-text";
+            case "number": return "bi-123";
+            case "date": return "bi-calendar";
+            case "dropdown": return "bi-list";
+            case "checkbox": return "bi-check-square";
+            case "radio": return "bi-record-circle";
+            case "email": return "bi-envelope";
+            case "phone": return "bi-telephone";
+            default: return "bi-input-cursor";
+        }
     }
-            </select>
-
-            <label for="Fields_IsRequired">Is Required?</label>
-            <input type="checkbox" name="Fields[${fieldsContainer.children.length}].IsRequired" />
-
-            <label for="Fields_Options">Options (JSON Format)</label>
-            <input type="text" class="form-control" name="Fields[${fieldsContainer.children.length}].Options" />
-        `;
-
-        fieldsContainer.appendChild(newFieldDiv);
-    });
-</script>
+}

@@ -11,14 +11,24 @@ namespace ClientPortalUI
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+
+            // Configure HttpClient for API communication
             builder.Services.AddHttpClient("ApiClient", client =>
             {
-                client.BaseAddress = new Uri("https://localhost:7264/api/"); // adjust to your API base URL
+                var apiUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl") 
+                    ?? "https://localhost:7264/api/";
+                client.BaseAddress = new Uri(apiUrl);
                 client.DefaultRequestHeaders.Accept.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                client.DefaultRequestHeaders.Accept.Add(
+                    new MediaTypeWithQualityHeaderValue("application/json"));
             });
 
             builder.Services.AddScoped<IApiService, ApiService>();
+
+            // Add logging
+            builder.Logging.ClearProviders();
+            builder.Logging.AddConsole();
+            builder.Logging.AddDebug();
 
             var app = builder.Build();
 
@@ -26,8 +36,11 @@ namespace ClientPortalUI
             if (!app.Environment.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                 app.UseHsts();
+            }
+            else
+            {
+                app.UseDeveloperExceptionPage();
             }
 
             app.UseHttpsRedirection();

@@ -4,16 +4,19 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace ClientPortalUI.API
 {
     public class ApiService : IApiService
     {
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ILogger<ApiService> _logger;
 
-        public ApiService(IHttpClientFactory httpClientFactory)
+        public ApiService(IHttpClientFactory httpClientFactory, ILogger<ApiService> logger)
         {
             _httpClientFactory = httpClientFactory;
+            _logger = logger;
         }
 
         // Retrieves all form assignments for a given client
@@ -112,38 +115,56 @@ namespace ClientPortalUI.API
         // Fetching available field types
         public async Task<List<FieldTypeViewModel>> GetFieldTypesAsync()
         {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var endpoint = "FieldTypes"; // Assuming the backend provides an endpoint to fetch this data
-
             try
             {
-                var fieldTypes = await client.GetFromJsonAsync<List<FieldTypeViewModel>>(endpoint);
+                var client = _httpClientFactory.CreateClient("ApiClient");
+                var endpoint = "FieldTypes";
+                
+                var response = await client.GetAsync(endpoint);
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("Failed to get field types. Status: {StatusCode}, Error: {Error}", 
+                        response.StatusCode, errorContent);
+                    return new List<FieldTypeViewModel>();
+                }
+
+                var fieldTypes = await response.Content.ReadFromJsonAsync<List<FieldTypeViewModel>>();
                 return fieldTypes ?? new List<FieldTypeViewModel>();
             }
             catch (Exception ex)
             {
-                throw new ApplicationException("Error retrieving field types.", ex);
+                _logger.LogError(ex, "Error retrieving field types");
+                throw new ApplicationException("Error retrieving field types. Please try again.", ex);
             }
         }
 
         // Creating a new form template
         public async Task<bool> CreateFormTemplateAsync(FormTemplateViewModel formTemplate)
         {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var endpoint = "FormTemplates"; // Assuming an endpoint where form templates are created
-
             try
             {
-                var response = await client.PostAsJsonAsync(endpoint, formTemplate);
-                return response.IsSuccessStatusCode;
+                var client = _httpClientFactory.CreateClient("ApiClient");
+                _logger.LogInformation("Creating form template: {TemplateName}", formTemplate.Name);
+
+                var response = await client.PostAsJsonAsync("FormTemplates", formTemplate);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Successfully created form template: {TemplateName}", formTemplate.Name);
+                    return true;
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Failed to create form template. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return false;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Error creating form template: {TemplateName}", formTemplate.Name);
                 throw new ApplicationException("Error creating form template.", ex);
             }
         }
-
     }
-
-
 }
