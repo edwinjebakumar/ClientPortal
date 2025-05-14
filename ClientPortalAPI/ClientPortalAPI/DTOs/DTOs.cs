@@ -60,12 +60,11 @@ namespace ClientPortalAPI.DTOs
             // Stores a JSON snapshot of the submission data for auditing
             public string DataSnapshot { get; set; } = string.Empty;
             public DateTime PerformedAt { get; set; }
-        }
-
-        public class ClientDTO
+        }        public class ClientDTO
         {
             public int Id { get; set; }
             public string Name { get; set; } = string.Empty;
+            public int AssignedFormsCount { get; set; }
         }
 
         public class FieldTypeDTO

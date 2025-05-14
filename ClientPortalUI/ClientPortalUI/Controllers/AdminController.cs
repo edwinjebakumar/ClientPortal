@@ -326,7 +326,7 @@ namespace ClientPortalUI.Controllers
                 return RedirectToAction(nameof(AdminDashboard));
             }
         }        [HttpGet]
-        public async Task<IActionResult> ClientManagement()
+        public async Task<IActionResult> ClientsManagement()
         {
             try
             {
@@ -359,7 +359,7 @@ namespace ClientPortalUI.Controllers
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     TempData["Error"] = "Client name is required.";
-                    return RedirectToAction(nameof(ClientManagement));
+                    return RedirectToAction(nameof(ClientsManagement));
                 }
 
                 var client = new ClientViewModel { Name = name };
@@ -380,7 +380,7 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error creating client. Please try again.";
             }
 
-            return RedirectToAction(nameof(ClientManagement));
+            return RedirectToAction(nameof(ClientsManagement));
         }
 
         [HttpPost]
@@ -391,7 +391,7 @@ namespace ClientPortalUI.Controllers
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     TempData["Error"] = "Client name is required.";
-                    return RedirectToAction(nameof(ClientManagement));
+                    return RedirectToAction(nameof(ClientsManagement));
                 }
 
                 var client = new ClientViewModel { Id = id, Name = name };
@@ -412,7 +412,7 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error updating client. Please try again.";
             }
 
-            return RedirectToAction(nameof(ClientManagement));
+            return RedirectToAction(nameof(ClientsManagement));
         }
 
         [HttpPost]
@@ -436,7 +436,7 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error deleting client. Please try again.";
             }
 
-            return RedirectToAction(nameof(ClientManagement));
+            return RedirectToAction(nameof(ClientsManagement));
         }
 
         [HttpPost]

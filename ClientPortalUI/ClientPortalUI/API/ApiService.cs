@@ -283,8 +283,7 @@ namespace ClientPortalUI.API
             var httpClient = _httpClientFactory.CreateClient("ApiClient");
             try
             {
-                var endpoint = $"Clients/createclient";
-                var response = await httpClient.PostAsJsonAsync(endpoint, client);
+                var response = await httpClient.PostAsJsonAsync("Clients", client);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)
