@@ -14,5 +14,11 @@ namespace ClientPortalUI.API
         Task<List<FormTemplateViewModel>> GetFormTemplatesAsync();
         Task<bool> UpdateFormTemplateAsync(FormTemplateViewModel template);
         Task<bool> DeleteFormTemplateAsync(int templateId);
+        Task<List<ClientViewModel>> GetClientsAsync();
+        Task<ClientViewModel> GetClientAsync(int id);
+        Task<bool> CreateClientAsync(ClientViewModel client);
+        Task<bool> UpdateClientAsync(ClientViewModel client);
+        Task<bool> DeleteClientAsync(int id);
+        Task<bool> AssignFormTemplateAsync(int clientId, int formTemplateId, string notes);
     }
 }

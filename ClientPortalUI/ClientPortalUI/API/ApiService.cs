@@ -242,5 +242,112 @@ namespace ClientPortalUI.API
                 throw new ApplicationException("Error deleting form template.", ex);
             }
         }
+
+        // Get all clients with their assigned forms count
+        public async Task<List<ClientViewModel>> GetClientsAsync()
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = "Clients";
+            try
+            {
+                var clients = await client.GetFromJsonAsync<List<ClientViewModel>>(endpoint);
+                return clients ?? new List<ClientViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving clients");
+                throw new ApplicationException("Error retrieving clients.", ex);
+            }
+        }
+
+        // Get a specific client by ID
+        public async Task<ClientViewModel> GetClientAsync(int id)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"Clients/{id}";
+            try
+            {
+                var clientInfo = await client.GetFromJsonAsync<ClientViewModel>(endpoint);
+                return clientInfo ?? new ClientViewModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving client {ClientId}", id);
+                throw new ApplicationException("Error retrieving client details.", ex);
+            }
+        }
+
+        // Create a new client
+        public async Task<bool> CreateClientAsync(ClientViewModel client)
+        {
+            var httpClient = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var endpoint = $"Clients/createclient";
+                var response = await httpClient.PostAsJsonAsync(endpoint, client);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating client: {ClientName}", client.Name);
+                throw new ApplicationException("Error creating client.", ex);
+            }
+        }
+
+        // Update an existing client
+        public async Task<bool> UpdateClientAsync(ClientViewModel client)
+        {
+            var httpClient = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var response = await httpClient.PutAsJsonAsync($"Clients/{client.Id}", client);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating client: {ClientId}", client.Id);
+                throw new ApplicationException("Error updating client.", ex);
+            }
+        }
+
+        // Delete a client
+        public async Task<bool> DeleteClientAsync(int id)
+        {
+            var httpClient = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var response = await httpClient.DeleteAsync($"Clients/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting client: {ClientId}", id);
+                throw new ApplicationException("Error deleting client.", ex);
+            }
+        }
+
+        // Assign a form template to a client
+        public async Task<bool> AssignFormTemplateAsync(int clientId, int formTemplateId, string notes)
+        {
+            var httpClient = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var request = new
+                {
+                    ClientId = clientId,
+                    FormTemplateId = formTemplateId,
+                    Notes = notes
+                };
+
+                var response = await httpClient.PostAsJsonAsync("FormAssignments", request);
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning form template {TemplateId} to client {ClientId}", 
+                    formTemplateId, clientId);
+                throw new ApplicationException("Error assigning form template.", ex);
+            }
+        }
     }
 }

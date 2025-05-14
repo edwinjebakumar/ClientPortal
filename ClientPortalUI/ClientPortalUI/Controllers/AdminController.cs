@@ -325,6 +325,146 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error cloning template. Please try again.";
                 return RedirectToAction(nameof(AdminDashboard));
             }
+        }        [HttpGet]
+        public async Task<IActionResult> ClientManagement()
+        {
+            try
+            {
+                // Get all clients
+                var clients = await _apiService.GetClientsAsync();
+
+                // Get available form templates for assignment
+                var templates = await _apiService.GetFormTemplatesAsync();
+                ViewBag.AvailableTemplates = templates;
+
+                // Set page title and description
+                ViewBag.Title = "Client Management";
+                ViewBag.Description = "Manage clients and their form assignments";
+
+                return View(clients);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving clients and templates");
+                TempData["Error"] = "Error loading client management page. Please try again.";
+                return View(new List<ClientViewModel>());
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateClient([FromForm] string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    TempData["Error"] = "Client name is required.";
+                    return RedirectToAction(nameof(ClientManagement));
+                }
+
+                var client = new ClientViewModel { Name = name };
+                var success = await _apiService.CreateClientAsync(client);
+
+                if (success)
+                {
+                    TempData["Success"] = "Client created successfully!";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to create client. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating client: {ClientName}", name);
+                TempData["Error"] = "Error creating client. Please try again.";
+            }
+
+            return RedirectToAction(nameof(ClientManagement));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateClient([FromForm] int id, [FromForm] string name)
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    TempData["Error"] = "Client name is required.";
+                    return RedirectToAction(nameof(ClientManagement));
+                }
+
+                var client = new ClientViewModel { Id = id, Name = name };
+                var success = await _apiService.UpdateClientAsync(client);
+
+                if (success)
+                {
+                    TempData["Success"] = "Client updated successfully!";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to update client. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating client: {ClientId}", id);
+                TempData["Error"] = "Error updating client. Please try again.";
+            }
+
+            return RedirectToAction(nameof(ClientManagement));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DeleteClient([FromForm] int id)
+        {
+            try
+            {
+                var success = await _apiService.DeleteClientAsync(id);
+                if (success)
+                {
+                    TempData["Success"] = "Client deleted successfully.";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to delete client. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting client: {ClientId}", id);
+                TempData["Error"] = "Error deleting client. Please try again.";
+            }
+
+            return RedirectToAction(nameof(ClientManagement));
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> AssignForm([FromForm] int clientId, [FromForm] int formTemplateId, [FromForm] string notes)
+        {
+            try
+            {
+                // Call your API service to assign the form template to the client
+                // You'll need to add this method to your IApiService and ApiService
+                var success = await _apiService.AssignFormTemplateAsync(clientId, formTemplateId, notes);
+
+                if (success)
+                {
+                    TempData["Success"] = "Form assigned successfully!";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to assign form. Please try again.";
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning form template {TemplateId} to client {ClientId}", 
+                    formTemplateId, clientId);
+                TempData["Error"] = "Error assigning form. Please try again.";
+            }
+
+            return RedirectToAction("ClientDashboard", "Client", new { id = clientId });
         }
     }
 }

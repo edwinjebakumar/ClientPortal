@@ -1,32 +1,184 @@
 ﻿@model List<FormAssignmentViewModel>
 @{
-    ViewData["Title"] = "Client Dashboard";
+    ViewData["Title"] = $"{ViewBag.ClientName}'s Dashboard";
 }
 
-<h2>Client Dashboard</h2>
-<p>Welcome to your dashboard. You can access and submit assigned forms here.</p>
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex align-items-center">
+                <h2 class="mb-0">@ViewBag.ClientName's Dashboard</h2>
+                <span class="badge bg-primary ms-3">@Model.Count Forms</span>
+            </div>
+            <p class="text-muted mt-2 mb-0">View and manage assigned forms</p>
+        </div>
+        <div class="col text-end">
+            <a href="@Url.Action("ClientsManagement", "Admin")" class="btn btn-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Clients
+            </a>
+        </div>
+    </div>
 
-<h2>Your Assigned Forms</h2>
-<table class="table">
-    <thead>
-        <tr>
-            <th>Form Name</th>
-            <th>Description</th>
-            <th>Assigned On</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-circle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row">
+        @if (Model.Any())
         {
-            <tr>
-                <td>@item.FormTemplateName</td>
-                <td>@item.Description</td>
-                <td>@item.AssignedAt.ToString("g")</td>
-                <td>
-                    <a href="@Url.Action("FillForm", "ClientDashboard", new { assignmentId = item.Id })" class="btn btn-primary">Fill Form</a>
-                </td>
-            </tr>
+            @foreach (var form in Model)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">@form.TemplateName</h5>
+                                <span class="badge bg-@GetStatusBadgeColor(form.Status)">@form.Status</span>
+                            </div>
+                            
+                            @if (!string.IsNullOrEmpty(form.Description))
+                            {
+                                <p class="card-text text-muted">@form.Description</p>
+                            }
+                            
+                            <p class="card-text">
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar me-1"></i>
+                                    Assigned on @form.AssignedAt.ToString("MMM dd, yyyy")
+                                </small>
+                            </p>
+                        </div>
+                        <div class="card-footer bg-transparent border-top-0">
+                            <div class="d-grid">
+                                @if (form.Status.ToLower() != "completed")
+                                {
+                                    <a href="@Url.Action("FillForm", "Client", new { assignmentId = form.Id })" 
+                                       class="btn btn-primary">
+                                        <i class="bi bi-pencil-square me-2"></i>Fill Form
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a href="@Url.Action("ViewSubmission", "Client", new { assignmentId = form.Id })" 
+                                       class="btn btn-outline-primary">
+                                        <i class="bi bi-eye me-2"></i>View Submission
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         }
-    </tbody>
-</table>
+        else
+        {
+            <div class="col">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-clipboard-x display-4 text-muted mb-3"></i>
+                        <h5>No Forms Assigned</h5>
+                        <p class="text-muted mb-0">This client has no forms assigned yet.</p>
+                        @if (User.IsInRole("Admin"))
+                        {
+                            <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#assignFormModal">
+                                <i class="bi bi-plus-circle me-2"></i>Assign New Form
+                            </button>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+    <!-- Assign Form Modal -->
+    <div class="modal fade" id="assignFormModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form asp-action="AssignForm" asp-controller="Admin" method="post" class="needs-validation" novalidate>
+                    <input type="hidden" name="clientId" value="@ViewBag.ClientId" />
+                    
+                    <div class="modal-header">
+                        <h5 class="modal-title">
+                            <i class="bi bi-clipboard-plus me-2"></i>Assign New Form
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="formTemplateId" class="form-label required">Select Form Template</label>
+                            <select class="form-select" id="formTemplateId" name="formTemplateId" required>
+                                <option value="">Choose a template...</option>
+                                @foreach (var template in ViewBag.AvailableTemplates ?? new List<FormTemplateViewModel>())
+                                {
+                                    <option value="@template.TemplateId">@template.Name</option>
+                                }
+                            </select>
+                            <div class="invalid-feedback">
+                                Please select a form template
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes (Optional)</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check2-circle me-2"></i>Assign Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Form validation
+        (function () {
+            'use strict'
+            var forms = document.querySelectorAll('.needs-validation')
+            Array.prototype.slice.call(forms).forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (!form.checkValidity()) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                    }
+                    form.classList.add('was-validated')
+                }, false)
+            })
+        })()
+    </script>
+}
+
+@functions {
+    private string GetStatusBadgeColor(string status)
+    {
+        return status?.ToLower() switch
+        {
+            "completed" => "success",
+            "in progress" => "warning",
+            "pending" => "info",
+            _ => "secondary"
+        };
+    }
+}

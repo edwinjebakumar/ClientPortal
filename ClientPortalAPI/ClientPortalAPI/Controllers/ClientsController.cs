@@ -19,7 +19,6 @@ namespace ClientPortalAPI.Controllers
         }
 
         [HttpGet()]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<ClientDTO>>> GetClients()
         {
             var clients = await _context.Clients
@@ -34,7 +33,6 @@ namespace ClientPortalAPI.Controllers
         }
 
         [HttpPost("createclient")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ClientDTO>> CreateClient(ClientDTO clientDto)
         {
             var client = new Client
