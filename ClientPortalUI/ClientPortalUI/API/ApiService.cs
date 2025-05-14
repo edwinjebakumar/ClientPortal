@@ -22,8 +22,8 @@ namespace ClientPortalUI.API
         // Retrieves all form assignments for a given client
         public async Task<List<FormAssignmentViewModel>> GetFormAssignmentsAsync(int clientId)
         {
-            var client = _httpClientFactory.CreateClient("ApiClient");
-            var endpoint = $"FormAssignments?clientId={clientId}";
+            var client = _httpClientFactory.CreateClient("ApiClient");            
+            var endpoint = $"FormAssignments/{clientId}";
             try
             {
                 var assignments = await client.GetFromJsonAsync<List<FormAssignmentViewModel>>(endpoint);

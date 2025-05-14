@@ -16,26 +16,77 @@ namespace ClientPortalAPI.Controllers
         public FormAssignmentsController(ApplicationDbContext context)
         {
             _context = context;
-        }
-
+        }       
+        
         // GET: api/FormAssignments
         [HttpGet]
         public async Task<ActionResult<IEnumerable<FormAssignmentDTO>>> GetAssignments()
         {
-            var dtoList = await _context.FormAssignments
-                                .Include(a => a.Client)
-                                .Include(a => a.FormTemplate)
-                                .Select(a => new FormAssignmentDTO
-                                {
-                                    FormTemplateId = a.FormTemplateId,
-                                    ClientId = a.ClientId,
-                                    FormTemplateName = a.FormTemplate.Name,
-                                    Description = a.FormTemplate.Description ?? "",
-                                    AssignedAt = a.AssignedAt
-                                })
-                                .ToListAsync();
+            try
+            {
+                var dtoList = await _context.FormAssignments
+                    .Include(a => a.Client)
+                    .Include(a => a.FormTemplate)
+                    .Select(a => new FormAssignmentDTO
+                    {
+                        Id = a.Id,
+                        FormTemplateId = a.FormTemplateId,
+                        ClientId = a.ClientId,
+                        FormTemplateName = a.FormTemplate.Name,
+                        Description = a.FormTemplate.Description ?? "",
+                        AssignedAt = a.AssignedAt,
+                        Status = a.Status
+                    })
+                    .ToListAsync();
 
-            return Ok(dtoList);
+                return Ok(dtoList);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error retrieving form assignments");
+            }
+        }
+
+ 
+        [HttpGet("{clientId}")]
+        public async Task<ActionResult<IEnumerable<FormAssignmentDTO>>> GetAssignmentsByClientId(int clientId)
+        {
+            try
+            {
+                // First verify the client exists
+                var clientExists = await _context.Clients.AnyAsync(c => c.Id == clientId);
+                if (!clientExists)
+                {
+                    return NotFound($"Client with ID {clientId} not found");
+                }
+
+                var assignments = await _context.FormAssignments
+                    .Include(a => a.FormTemplate)
+                    .Where(a => a.ClientId == clientId)
+                    .Select(a => new FormAssignmentDTO
+                    {
+                        Id = a.Id,
+                        FormTemplateId = a.FormTemplateId,
+                        ClientId = a.ClientId,
+                        FormTemplateName = a.FormTemplate.Name,
+                        Description = a.FormTemplate.Description ?? "",
+                        AssignedAt = a.AssignedAt,
+                        Status = a.Status,
+                        Notes = a.Notes,
+                        LastSubmissionDate = a.Submissions
+                            .OrderByDescending(s => s.SubmittedAt)
+                            .Select(s => s.SubmittedAt)
+                            .FirstOrDefault()
+                    })
+                    .OrderByDescending(a => a.AssignedAt)
+                    .ToListAsync();
+
+                return Ok(assignments);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error retrieving form assignments for client {clientId}");
+            }
         }
         // POST: api/FormAssignments
         [HttpPost("create")]
