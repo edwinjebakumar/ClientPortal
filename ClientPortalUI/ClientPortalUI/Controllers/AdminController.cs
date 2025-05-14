@@ -14,7 +14,9 @@ namespace ClientPortalUI.Controllers
         {
             _apiService = apiService;
             _logger = logger;
-        }        public async Task<IActionResult> AdminDashboard()
+        }        
+        
+        public async Task<IActionResult> AdminDashboard()
         {
             try
             {

@@ -1,5 +1,5 @@
 ﻿using ClientPortalAPI.Data;
-using ClientPortalAPI.DTOs.ClientPortalAPI.DTOs;
+using ClientPortalAPI.DTOs;
 using ClientPortalAPI.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -29,7 +29,8 @@ namespace ClientPortalAPI.Controllers
                                      {
                                          TemplateId = t.Id,
                                          Name = t.Name,
-                                         Description = t.Description ?? ""
+                                         Description = t.Description ?? "",
+                                         BaseTemplateId = t.BaseTemplateId
                                      })
                                      .ToListAsync();
             return Ok(formTemplates);
@@ -48,20 +49,22 @@ namespace ClientPortalAPI.Controllers
             {
                 return NotFound();
             }
-
             return new FormTemplateDTO
             {
                 TemplateId = template.Id,
                 Name = template.Name,
                 Description = template.Description,
-                Fields = template.Fields.Select(f => new FormFieldDTO
-                {
-                    FieldId = f.Id,
-                    Label = f.Label,
-                    FieldTypeName = f.FieldType.Name,
-                    IsRequired = f.IsRequired,
-                    Options = f.OptionsJson
-                }).ToList()
+                Fields = template.Fields
+                    .OrderBy(f => f.FieldOrder)
+                    .Select(f => new FormFieldDTO
+                    {
+                        FieldId = f.Id,
+                        Label = f.Label,
+                        FieldTypeName = f.FieldType.Name,
+                        IsRequired = f.IsRequired,
+                        Options = f.OptionsJson,
+                        FieldOrder = f.FieldOrder
+                    }).ToList()
             };
         }
 
@@ -90,13 +93,13 @@ namespace ClientPortalAPI.Controllers
                     {
                         return BadRequest($"Invalid field type: {fieldDto.FieldTypeName}");
                     }
-
                     var field = new FormField
                     {
                         Label = fieldDto.Label,
                         FieldType = fieldType,
                         IsRequired = fieldDto.IsRequired,
-                        OptionsJson = fieldDto.Options
+                        OptionsJson = fieldDto.Options,
+                        FieldOrder = fieldDto.FieldOrder
                     };
 
                     template.Fields.Add(field);
@@ -122,7 +125,8 @@ namespace ClientPortalAPI.Controllers
                             Label = f.Label,
                             FieldTypeName = f.FieldType.Name,
                             IsRequired = f.IsRequired,
-                            Options = f.OptionsJson
+                            Options = f.OptionsJson,
+                            FieldOrder = f.FieldOrder
                         }).ToList()
                     });
             }
@@ -136,18 +140,80 @@ namespace ClientPortalAPI.Controllers
         // PUT: api/FormTemplates/5
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
-        public async Task<IActionResult> UpdateFormTemplate(int id, FormTemplate template)
+        public async Task<IActionResult> UpdateFormTemplate(int id, FormTemplateDTO templateDto)
         {
-            if (id != template.Id)
+            if (id != templateDto.TemplateId)
             {
                 return BadRequest();
             }
 
-            _context.Entry(template).State = EntityState.Modified;
+            var existingTemplate = await _context.FormTemplates
+                .Include(t => t.Fields)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (existingTemplate == null)
+            {
+                return NotFound();
+            }
 
             try
             {
+                // Update basic template properties
+                existingTemplate.Name = templateDto.Name;
+                existingTemplate.Description = templateDto.Description;
+
+                // Remove fields that are no longer in the template
+                var fieldsToRemove = existingTemplate.Fields
+                    .Where(f => !templateDto.Fields.Any(dto => dto.FieldId == f.Id))
+                    .ToList();
+
+                foreach (var field in fieldsToRemove)
+                {
+                    _context.Remove(field);
+                }
+
+                // Update existing fields and add new ones
+                foreach (var fieldDto in templateDto.Fields)
+                {
+                    var fieldType = await _context.FieldTypes
+                        .FirstOrDefaultAsync(ft => ft.Name == fieldDto.FieldTypeName);
+
+                    if (fieldType == null)
+                    {
+                        return BadRequest($"Invalid field type: {fieldDto.FieldTypeName}");
+                    }
+
+                    if (fieldDto.FieldId > 0)
+                    {
+                        // Update existing field
+                        var existingField = existingTemplate.Fields
+                            .FirstOrDefault(f => f.Id == fieldDto.FieldId);
+
+                        if (existingField != null)
+                        {
+                            existingField.Label = fieldDto.Label;
+                            existingField.FieldType = fieldType;
+                            existingField.IsRequired = fieldDto.IsRequired;
+                            existingField.OptionsJson = fieldDto.Options;
+                            existingField.FieldOrder = fieldDto.FieldOrder;
+                        }
+                    }
+                    else
+                    {
+                        // Add new field
+                        existingTemplate.Fields.Add(new FormField
+                        {
+                            Label = fieldDto.Label,
+                            FieldType = fieldType,
+                            IsRequired = fieldDto.IsRequired,
+                            OptionsJson = fieldDto.Options,
+                            FieldOrder = fieldDto.FieldOrder
+                        });
+                    }
+                }
+
                 await _context.SaveChangesAsync();
+                return NoContent();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -155,13 +221,13 @@ namespace ClientPortalAPI.Controllers
                 {
                     return NotFound();
                 }
-                else
-                {
-                    throw;
-                }
+                throw;
             }
-
-            return NoContent();
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating template: {TemplateName}", templateDto.Name);
+                return StatusCode(500, "An error occurred while updating the form template.");
+            }
         }
 
         // DELETE: api/FormTemplates/5

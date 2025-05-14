@@ -3,11 +3,9 @@ using System.Collections.Generic;
 
 namespace ClientPortalAPI.DTOs
 {
-    namespace ClientPortalAPI.DTOs
+    // DTO for Form Assignment (for listing the forms assigned to a client)
+    public class FormAssignmentDTO
     {
-        // DTO for Form Assignment (for listing the forms assigned to a client)
-        public class FormAssignmentDTO
-        {
             public int ClientId { get; set; }
             public int FormTemplateId { get; set; }
             public string FormTemplateName { get; set; } = string.Empty;
@@ -22,10 +20,9 @@ namespace ClientPortalAPI.DTOs
             public int TemplateId { get; set; }
             public string Name { get; set; } = string.Empty;
             public string? Description { get; set; }
+            public int? BaseTemplateId { get; set; }
             public List<FormFieldDTO> Fields { get; set; } = new();
-        }
-
-        // DTO for Form Field (part of a form template)
+        }        // DTO for Form Field (part of a form template)
         public class FormFieldDTO
         {
             public int FieldId { get; set; }
@@ -33,6 +30,7 @@ namespace ClientPortalAPI.DTOs
             public string FieldTypeName { get; set; } = string.Empty;
             public bool IsRequired { get; set; }
             public string? Options { get; set; }
+            public int FieldOrder { get; set; }
         }
 
         // DTO for receiving a form submission from the UI
@@ -74,7 +72,4 @@ namespace ClientPortalAPI.DTOs
         {
             public int Id { get; set; }
             public string Name { get; set; } = string.Empty; // E.g., Text, Date, Dropdown, etc.
-        }
-    }
-
-}
+        }}

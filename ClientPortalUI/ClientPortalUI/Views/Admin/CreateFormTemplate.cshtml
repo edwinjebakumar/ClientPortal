@@ -7,10 +7,9 @@
     <h2 class="mb-4">Create New Form Template</h2>
 
     <form asp-action="CreateFormTemplate" method="post" id="formTemplateForm" class="needs-validation" novalidate>
-        <div class="row">
-            <!-- Available Field Types Panel -->
+        <div class="row">            <!-- Available Field Types Panel -->
             <div class="col-md-3">
-                <div class="card">
+                <div class="card sticky-panel">
                     <div class="card-header">
                         <h5 class="mb-0">Available Fields</h5>
                     </div>
@@ -57,7 +56,7 @@
                         <h4 class="mb-0">Form Fields</h4>
                     </div>
                     <div class="card-body">
-                        <div id="formFields" class="form-fields-list">
+                        <div id="formFields" class="form-fields-list form-building-area">
                             @for (int i = 0; i < Model.Fields.Count; i++)
                             {
                                 <div class="field-item card mb-3" data-field-type="@Model.Fields[i].FieldTypeName">
@@ -84,6 +83,7 @@
                                             </div>
                                             <div class="col-md-6">
                                                 <input type="hidden" name="Fields[@i].FieldTypeName" value="@Model.Fields[i].FieldTypeName" />
+                                                <input type="hidden" name="Fields[@i].FieldOrder" value="@i" />
                                                 <div class="form-check mt-4">
                                                     <input type="checkbox" class="form-check-input" 
                                                            name="Fields[@i].IsRequired" value="true" 
@@ -137,13 +137,17 @@
             content: " *";
             color: red;
         }
-        .field-type-item {
-            cursor: move;
-            user-select: none;
+        .sticky-panel {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
         }
-        .field-type-item:hover {
-            transform: translateY(-2px);
-            transition: transform 0.2s;
+        .field-type-item {
+            cursor: grab;
+        }
+        .field-type-item:active {
+            cursor: grabbing;
         }
         .field-item {
             background-color: #f8f9fa;
@@ -153,19 +157,46 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
         .field-item .handle {
-            cursor: move;
-            color: #6c757d;
+            cursor: grab;
+        }
+        .field-item .handle:active {
+            cursor: grabbing;
         }
         .sortable-ghost {
             opacity: 0.5;
             background-color: #e9ecef;
         }
         .field-types-list {
-            min-height: 400px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
         }
         .form-fields-list {
             min-height: 200px;
-            padding: 10px 0;
+            padding: 1rem;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+        .form-fields-list.drag-over {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: #007bff;
+        }
+        .sticky-panel {
+            position: sticky;
+            top: 20px;
+            z-index: 1000;
+        }
+        .form-building-area {
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+        .form-building-area.drag-over {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: #007bff;
+        }
+        .field-item.dragging {
+            opacity: 0.5;
         }
     </style>
 }
@@ -188,20 +219,24 @@
             });
 
             // Initialize Sortable for form fields (drop target)
-            new Sortable(document.getElementById('formFields'), {
+            var formFields = document.getElementById('formFields');
+            new Sortable(formFields, {
                 group: {
                     name: 'fields',
-                    pull: false,
-                    put: true
+                    pull: false
                 },
-                handle: '.handle',
                 animation: 150,
+                handle: '.handle',
                 onAdd: function (evt) {
                     const item = evt.item;
                     const fieldType = item.dataset.fieldType;
                     const newFieldHtml = createFieldHtml(fieldType, fieldCount++);
                     item.outerHTML = newFieldHtml;
                     updateNoFieldsMessage();
+                    updateFieldOrders();
+                },
+                onSort: function () {
+                    updateFieldOrders();
                 }
             });
 
@@ -220,6 +255,7 @@
                 $(this).closest('.field-item').remove();
                 updateNoFieldsMessage();
                 reorderFields();
+                updateFieldOrders();
             });
 
             // Helper functions
@@ -248,6 +284,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <input type="hidden" name="Fields[${index}].FieldTypeName" value="${fieldType}" />
+                                    <input type="hidden" name="Fields[${index}].FieldOrder" value="${index}" />
                                     <div class="form-check mt-4">
                                         <input type="checkbox" class="form-check-input" 
                                                name="Fields[${index}].IsRequired" value="true" />
@@ -305,6 +342,12 @@
                             $(this).attr('name', name.replace(/\[\d+\]/, `[${index}]`));
                         }
                     });
+                });
+            }
+
+            function updateFieldOrders() {
+                $('#formFields .field-item').each(function(index) {
+                    $(this).find('input[name$=".FieldOrder"]').val(index);
                 });
             }
 

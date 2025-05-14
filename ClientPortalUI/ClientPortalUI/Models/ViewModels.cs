@@ -15,7 +15,8 @@ namespace ClientPortalUI.Models
         [StringLength(500, ErrorMessage = "Description cannot exceed 500 characters")]
         public string Description { get; set; } = string.Empty;
 
-        public bool IsBaseTemplate { get; set; }
+        public int? BaseTemplateId { get; set; }
+        public bool IsBaseTemplate => BaseTemplateId is not null;
 
         public List<FormFieldViewModel> Fields { get; set; } = new();
     }
@@ -25,8 +26,7 @@ namespace ClientPortalUI.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Field label is required")]
-        [StringLength(100, MinimumLength = 1, ErrorMessage = "Field label must be between 1 and 100 characters")]
-        public string Label { get; set; } = string.Empty;
+        [StringLength(100, MinimumLength = 1, ErrorMessage = "Field label must be between 1 and 100 characters")]        public string Label { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Field type is required")]
         public string FieldTypeName { get; set; } = string.Empty;
@@ -35,6 +35,8 @@ namespace ClientPortalUI.Models
 
         [StringLength(1000, ErrorMessage = "Options cannot exceed 1000 characters")]
         public string Options { get; set; } = string.Empty;
+
+        public int FieldOrder { get; set; }
     }
 
     public class FieldTypeViewModel

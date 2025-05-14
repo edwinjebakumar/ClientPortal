@@ -12,6 +12,7 @@
 
         public bool IsRequired { get; set; }
         public string? OptionsJson { get; set; } // for dropdowns/radio buttons
+        public int FieldOrder { get; set; } // determines the display order of fields
     }
 
 }

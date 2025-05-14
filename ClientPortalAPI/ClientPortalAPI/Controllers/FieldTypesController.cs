@@ -1,5 +1,5 @@
 ﻿using ClientPortalAPI.Data;
-using ClientPortalAPI.DTOs.ClientPortalAPI.DTOs;
+using ClientPortalAPI.DTOs;
 using ClientPortalAPI.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
