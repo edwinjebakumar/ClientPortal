@@ -287,5 +287,44 @@ namespace ClientPortalUI.Controllers
                 return StatusCode(500, "Error retrieving field types");
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> CloneTemplate(int id)
+        {
+            try
+            {
+                var template = await _apiService.GetFormTemplateAsync(id);
+                if (template == null)
+                {
+                    TempData["Error"] = "Template not found.";
+                    return RedirectToAction(nameof(AdminDashboard));
+                }                // Prepare a new template based on the existing one
+                var newTemplate = new FormTemplateViewModel
+                {
+                    Name = $"Copy of {template.Name}",
+                    Description = template.Description,
+                    BaseTemplateId = template.IsBaseTemplate ? template.TemplateId : template.BaseTemplateId,
+                    Fields = template.Fields.Select(f => new FormFieldViewModel
+                    {
+                        Label = f.Label,
+                        FieldTypeName = f.FieldTypeName,
+                        IsRequired = f.IsRequired,
+                        Options = f.Options,
+                        FieldOrder = f.FieldOrder
+                    }).ToList()
+                };
+
+                // Get field types for the view
+                ViewBag.FieldTypes = await _apiService.GetFieldTypesAsync();
+
+                return View("CreateFormTemplate", newTemplate);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error cloning template. Id: {TemplateId}", id);
+                TempData["Error"] = "Error cloning template. Please try again.";
+                return RedirectToAction(nameof(AdminDashboard));
+            }
+        }
     }
 }

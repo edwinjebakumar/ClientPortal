@@ -139,7 +139,6 @@ namespace ClientPortalAPI.Controllers
 
         // PUT: api/FormTemplates/5
         [HttpPut("{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> UpdateFormTemplate(int id, FormTemplateDTO templateDto)
         {
             if (id != templateDto.TemplateId)
@@ -232,7 +231,6 @@ namespace ClientPortalAPI.Controllers
 
         // DELETE: api/FormTemplates/5
         [HttpDelete("{id}")]
-        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> DeleteFormTemplate(int id)
         {
             var template = await _context.FormTemplates.FindAsync(id);

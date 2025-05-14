@@ -1,31 +1,65 @@
 @model FormTemplateViewModel
-
 @{
-    ViewData["Title"] = "Edit Template";
+    ViewData["Title"] = "Edit Form Template";
 }
 
-<div class="container">
-    <h1>Edit Template</h1>
+<div class="container-fluid mt-4">
+    <h2 class="mb-4">Edit Form Template</h2>
 
-    <form id="editTemplateForm" method="post">
-        <input type="hidden" asp-for="TemplateId" />
-        <input type="hidden" asp-for="IsBaseTemplate" />
+    <form asp-action="EditTemplate" method="post" id="formTemplateForm" class="needs-validation" novalidate>
+        <input type="hidden" asp-for="TemplateId" />        <input type="hidden" asp-for="IsBaseTemplate" />
 
-        <div class="mb-3">
-            <label asp-for="Name" class="form-label">Template Name</label>
-            <input asp-for="Name" class="form-control" required />
-            <span asp-validation-for="Name" class="text-danger"></span>
-        </div>
+        <div class="row">
+            <!-- Available Field Types Panel -->
+            <div class="col-md-3">
+                <div class="card sticky-panel">
+                    <div class="card-header">
+                        <h5 class="mb-0">Available Fields</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="availableFields" class="field-types-list">
+                            @foreach (var fieldType in ViewBag.FieldTypes)
+                            {
+                                <div class="field-type-item mb-2" data-field-type="@fieldType.Name">
+                                    <div class="card">
+                                        <div class="card-body py-2 px-3">
+                                            <i class="bi @GetFieldTypeIcon(fieldType.Name)"></i>
+                                            <span class="ms-2">@fieldType.Name</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                        <div class="text-muted small mt-3">
+                            <i class="bi bi-info-circle"></i> Drag fields to build your form
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="mb-3">
-            <label asp-for="Description" class="form-label">Description</label>
-            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
-        </div>
+            <!-- Form Building Area -->
+            <div class="col-md-9">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <div class="form-group mb-3">
+                            <label asp-for="Name" class="form-label required">Template Name</label>
+                            <input asp-for="Name" class="form-control" required />
+                            <div class="invalid-feedback">Please enter a template name</div>
+                        </div>
 
-        <div id="fieldsContainer" class="mb-4">
-            <h3>Form Fields</h3>
-            <div id="formFields" class="list-group mb-3">
+                        <div class="form-group mb-3">
+                            <label asp-for="Description" class="form-label">Description</label>
+                            <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0">Form Fields</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="formFields" class="form-fields-list form-building-area">
                 @for (var i = 0; i < Model.Fields.Count; i++)
                 {
                     <div class="list-group-item field-item" data-field-index="@i">
@@ -80,6 +114,32 @@
             <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
     </form>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    @if (TempData["Success"] != null)
+    {
+        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-check-circle me-2"></i> @TempData["Success"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="bi bi-exclamation-circle me-2"></i> @TempData["Error"]
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    }
 </div>
 
 @section Scripts {
@@ -169,5 +229,228 @@
             }
             $(this).addClass('was-validated');
         });
+
+        // Initialize Sortable for field types (source)
+        new Sortable(document.getElementById('availableFields'), {
+            group: { 
+                name: 'fields',
+                pull: 'clone',
+                put: false
+            },
+            sort: false,
+            animation: 150
+        });
+
+        // Initialize Sortable for form fields (destination)
+        var formFields = document.getElementById('formFields');
+        new Sortable(formFields, {
+            group: {
+                name: 'fields',
+                pull: false
+            },
+            animation: 150,
+            handle: '.handle',
+            onAdd: function (evt) {
+                var itemEl = evt.item;
+                var fieldType = itemEl.getAttribute('data-field-type');
+                var newIndex = evt.newIndex;
+                
+                itemEl.outerHTML = createFieldHtml(fieldType, newIndex);
+                updateFieldOrders();
+            },
+            onSort: function (evt) {
+                updateFieldOrders();
+            }
+        });
+
+        function updateFieldOrders() {
+            var fields = document.querySelectorAll('#formFields .field-item');
+            fields.forEach((field, index) => {
+                var orderInput = field.querySelector('input[name$="].FieldOrder"]');
+                if (orderInput) {
+                    orderInput.value = index;
+                }
+                updateFieldInputs(field, index);
+            });
+        }
+
+        function updateFieldInputs(fieldElement, index) {
+            var inputs = fieldElement.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                var name = input.getAttribute('name');
+                if (name) {
+                    input.setAttribute('name', name.replace(/Fields\[\d+\]/, `Fields[${index}]`));
+                }
+            });
+        }
+
+        function createFieldHtml(fieldType, index) {
+            // Keep any existing field ID if this is a reorder
+            var existingId = '';
+            var existingField = document.querySelector(`[name="Fields[${index}].Id"]`);
+            if (existingField) {
+                existingId = `<input type="hidden" name="Fields[${index}].Id" value="${existingField.value}" />`;
+            }
+
+            return `
+                <div class="field-item card mb-3" data-field-type="${fieldType}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-grip-vertical handle me-2"></i>
+                                <i class="bi ${getFieldTypeIcon(fieldType)} me-2"></i>
+                                <h6 class="mb-0">${fieldType} Field</h6>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-field">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group mb-2">
+                                    <label class="form-label required">Field Label</label>
+                                    ${existingId}
+                                    <input type="text" class="form-control" name="Fields[${index}].Label" required />
+                                    <div class="invalid-feedback">Please enter a field label</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="hidden" name="Fields[${index}].FieldTypeName" value="${fieldType}" />
+                                <input type="hidden" name="Fields[${index}].FieldOrder" value="${index}" />
+                                <div class="form-check mt-4">
+                                    <input type="checkbox" class="form-check-input" name="Fields[${index}].IsRequired" value="true" />
+                                    <label class="form-check-label">Required Field</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        ${fieldType === 'Dropdown' ? `
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label class="form-label required">Options (comma-separated)</label>
+                                    <input type="text" class="form-control" name="Fields[${index}].Options" required />
+                                    <div class="invalid-feedback">Please enter options for the dropdown</div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Handle remove field with confirmation
+        document.addEventListener('click', function(e) {
+            if (e.target.closest('.remove-field')) {
+                e.preventDefault();
+                if (confirm('Are you sure you want to remove this field? This action cannot be undone.')) {
+                    var fieldItem = e.target.closest('.field-item');
+                    fieldItem.remove();
+                    updateFieldOrders();
+                }
+            }
+        });
+
+        // Initialize toasts
+        var toastElList = [].slice.call(document.querySelectorAll('.toast'))
+        var toastList = toastElList.map(function (toastEl) {
+            return new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 })
+        });
+        toastList.forEach(toast => toast.show());
+
+        // Form validation
+        document.getElementById('formTemplateForm').addEventListener('submit', function(event) {
+            if (!this.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+
+            var fields = document.querySelectorAll('#formFields .field-item');
+            if (fields.length === 0) {
+                event.preventDefault();
+                alert('Please add at least one field to the form template.');
+            }
+
+            this.classList.add('was-validated');
+        });
+
+        // Helper function to get field type icon
+        function getFieldTypeIcon(fieldType) {
+            switch (fieldType.toLowerCase()) {
+                case 'text': return 'bi-input-cursor-text';
+                case 'number': return 'bi-123';
+                case 'date': return 'bi-calendar';
+                case 'dropdown': return 'bi-list';
+                case 'checkbox': return 'bi-check-square';
+                case 'file': return 'bi-file-earmark';
+                default: return 'bi-square';
+            }
+        }
     </script>
+}
+
+@section Styles {
+    <style>
+        .sticky-panel {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .field-types-list {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+
+        .handle {
+            cursor: grab;
+        }
+
+        .handle:active {
+            cursor: grabbing;
+        }
+
+        .field-type-item {
+            cursor: grab;
+        }
+
+        .field-type-item:active {
+            cursor: grabbing;
+        }
+
+        .form-building-area {
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+
+        .form-building-area.drag-over {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: #007bff;
+        }
+
+        .field-item.dragging {
+            opacity: 0.5;
+        }
+    </style>
+}
+
+@functions {
+    private string GetFieldTypeIcon(string fieldType)
+    {
+        switch (fieldType.ToLower())
+        {
+            case "text": return "bi-input-cursor-text";
+            case "number": return "bi-123";
+            case "date": return "bi-calendar";
+            case "dropdown": return "bi-list";
+            case "checkbox": return "bi-check-square";
+            case "file": return "bi-file-earmark";
+            default: return "bi-square";
+        }
+    }
 }
