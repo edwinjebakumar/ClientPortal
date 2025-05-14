@@ -1,4 +1,5 @@
 ﻿using ClientPortalAPI.Data;
+using ClientPortalAPI.DTOs;
 using ClientPortalAPI.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -8,16 +9,20 @@ using Microsoft.EntityFrameworkCore;
 namespace ClientPortalAPI.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class SubmissionsController : ControllerBase
+    [Route("api/[controller]")]    public class SubmissionsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ILogger<SubmissionsController> _logger;
 
-        public SubmissionsController(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        public SubmissionsController(
+            ApplicationDbContext context, 
+            UserManager<ApplicationUser> userManager,
+            ILogger<SubmissionsController> logger)
         {
             _context = context;
             _userManager = userManager;
+            _logger = logger;
         }
 
         // GET: api/Submissions/{id}
@@ -34,44 +39,65 @@ namespace ClientPortalAPI.Controllers
             return submission;
         }
 
-        // POST: api/Submissions
-        [HttpPost]
-        [Authorize(Roles = "Client,Employee")]
-        public async Task<ActionResult<Submission>> CreateSubmission(Submission submission)
+        // GET: api/Submissions/latest/{assignmentId}
+        [HttpGet("latest/{assignmentId}")]
+        public async Task<ActionResult<Submission>> GetLatestSubmission(int assignmentId)
         {
-            // For new submission (Option 2: update existing record if exists)
-            // Here we assume that a client can only have one active submission per assignment.
-            // You may want to check if a submission already exists.
-            var existingSubmission = await _context.Submissions
-                                      .FirstOrDefaultAsync(s => s.FormAssignmentId == submission.FormAssignmentId && s.SubmittedByUserId == submission.SubmittedByUserId);
+            var submission = await _context.Submissions
+                .Where(s => s.FormAssignmentId == assignmentId)
+                .OrderByDescending(s => s.SubmittedAt)
+                .FirstOrDefaultAsync();
 
-            string dataJson = submission.DataJson; // assuming client sends valid JSON data
-
-            if (existingSubmission == null)
+            if (submission == null)
             {
-                // Insert new submission
-                submission.SubmittedAt = DateTime.UtcNow;
+                return NotFound();
+            }
+
+            return submission;
+        }        // POST: api/Submissions
+        [HttpPost]
+        //[Authorize(Roles = "Client,Employee")]
+        public async Task<ActionResult<SubmissionResponseDTO>> CreateSubmission(SubmissionRequestDTO submissionRequest)
+        {
+            try 
+            {
+                // Create new submission entity
+                var submission = new Submission
+                {
+                    FormAssignmentId = submissionRequest.FormAssignmentId,
+                    SubmittedByUserId = submissionRequest.SubmittedByUserId,
+                    DataJson = submissionRequest.DataJson,
+                    SubmittedAt = DateTime.UtcNow
+                };
+
                 _context.Submissions.Add(submission);
-                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();                // Log activity with snapshot
+                await LogActivity(submission.Id, submission.SubmittedByUserId, "Submit", submission.DataJson, "Initial submission");
 
-                // Log activity with snapshot
-                await LogActivity(submission.Id, submission.SubmittedByUserId, "Submit", dataJson, "Initial submission");
+                // Update form assignment status
+                var formAssignment = await _context.FormAssignments.FindAsync(submission.FormAssignmentId);
+                if (formAssignment != null)
+                {
+                    formAssignment.Status = "Submitted";
+                    await _context.SaveChangesAsync();
+                }
 
-                return CreatedAtAction(nameof(GetSubmission), new { id = submission.Id }, submission);
+                // Return DTO
+                var response = new SubmissionResponseDTO
+                {
+                    SubmissionId = submission.Id,
+                    DataJson = submission.DataJson,
+                    SubmittedAt = submission.SubmittedAt
+                };
+
+                return CreatedAtAction(nameof(GetSubmission), new { id = submission.Id }, response);
             }
-            else
+            catch (Exception ex)
             {
-                // Update existing submission
-                var oldData = existingSubmission.DataJson;
-                existingSubmission.DataJson = dataJson;
-                existingSubmission.SubmittedAt = DateTime.UtcNow;
-                _context.Entry(existingSubmission).State = EntityState.Modified;
-                await _context.SaveChangesAsync();
-
-                // Log activity capturing before and after (for demo, we store new data snapshot)
-                await LogActivity(existingSubmission.Id, submission.SubmittedByUserId, "Edit", dataJson, "Updated submission");
-                return Ok(existingSubmission);
+                _logger.LogError(ex, "Error creating submission for assignment {AssignmentId}", submissionRequest.FormAssignmentId);
+                return StatusCode(500, "Error creating submission");
             }
+
         }
 
         private async Task LogActivity(int submissionId, string userId, string actionType, string dataSnapshot, string description)

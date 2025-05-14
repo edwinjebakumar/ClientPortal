@@ -41,20 +41,50 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error loading client dashboard. Please try again.";
                 return RedirectToAction("ClientsManagement", "Admin");
             }
-        }
-
+        }        
+        
         public async Task<IActionResult> FillForm(int assignmentId)
         {
             try
             {
-                var formTemplate = await _apiService.GetFormTemplateAsync(assignmentId);
-                if (formTemplate == null)
+                var assignment = await _apiService.GetFormAssignmentAsync(assignmentId);
+                if (assignment == null)
                 {
-                    TempData["Error"] = "Form not found.";
-                    return RedirectToAction("ClientDashboard");
+                    TempData["Error"] = "Form assignment not found.";
+                    return RedirectToAction("ClientDashboard", assignment?.ClientId);
                 }
 
-                return View(formTemplate);
+                var formTemplate = await _apiService.GetFormTemplateAsync(assignment.FormTemplateId);
+                if (formTemplate == null)
+                {
+                    TempData["Error"] = "Form template not found.";
+                    return RedirectToAction("ClientDashboard", assignment?.ClientId);
+                }
+
+                // Get the latest submission if it exists
+                var latestSubmission = await _apiService.GetLatestSubmissionAsync(assignmentId);
+
+                var viewModel = new FillFormViewModel
+                {
+                    AssignmentId = assignmentId,
+                    FormName = formTemplate.Name,
+                    Description = formTemplate.Description,
+                    Status = assignment.Status,
+                    LastSubmissionDate = assignment.LastSubmissionDate,
+                    ExistingDataJson = latestSubmission?.DataJson,
+                    Fields = formTemplate.Fields.Select(f => new FormFieldValueViewModel
+                    {
+                        Id = f.Id,
+                        Label = f.Label,
+                        FieldTypeName = f.FieldTypeName,
+                        IsRequired = f.IsRequired,
+                        Options = f.Options,
+                        FieldOrder = f.FieldOrder,
+                        Value = null // Will be populated from existingData in the view
+                    }).ToList()
+                };
+
+                return View(viewModel);
             }
             catch (Exception ex)
             {
@@ -62,16 +92,30 @@ namespace ClientPortalUI.Controllers
                 TempData["Error"] = "Error loading form. Please try again.";
                 return RedirectToAction("ClientDashboard");
             }
-        }
-
-        [HttpPost]
+        }        [HttpPost]
         public async Task<IActionResult> SubmitForm(int assignmentId, [FromForm] Dictionary<string, string> formData)
         {
             try
             {
+                // Get form template to validate required fields
+                var assignment = await _apiService.GetFormAssignmentAsync(assignmentId);
+                var template = await _apiService.GetFormTemplateAsync(assignment.FormTemplateId);
+                
+                // Validate required fields
+                var requiredFields = template.Fields.Where(f => f.IsRequired).Select(f => f.Label);
+                foreach (var field in requiredFields)
+                {
+                    if (!formData.ContainsKey(field) || string.IsNullOrWhiteSpace(formData[field]))
+                    {
+                        TempData["Error"] = $"Please fill in the required field: {field}";
+                        return RedirectToAction("FillForm", new { assignmentId });
+                    }
+                }
+
                 var submission = new SubmissionViewModel
                 {
                     FormAssignmentId = assignmentId,
+                    SubmittedByUserId = User.Identity?.Name ?? "anonymous", // Replace with actual user ID
                     DataJson = System.Text.Json.JsonSerializer.Serialize(formData)
                 };
 
@@ -79,7 +123,7 @@ namespace ClientPortalUI.Controllers
                 if (result != null)
                 {
                     TempData["Success"] = "Form submitted successfully!";
-                    return RedirectToAction("ClientDashboard");
+                    return RedirectToAction("ClientDashboard", new { id = assignment.ClientId });
                 }
 
                 TempData["Error"] = "Failed to submit form. Please try again.";

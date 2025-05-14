@@ -5,6 +5,9 @@ namespace ClientPortalUI.API
     public interface IApiService
     {
         Task<List<FormAssignmentViewModel>> GetFormAssignmentsAsync(int clientId);
+        Task<FormAssignmentViewModel> GetFormAssignmentAsync(int assignmentId);
+
+        Task<SubmissionResponseViewModel?> GetLatestSubmissionAsync(int assignmentId);
         Task<FormTemplateViewModel> GetFormTemplateAsync(int assignmentId);
         Task<bool> CreateFormTemplateAsync(FormTemplateViewModel formTemplate);
         Task<List<FieldTypeViewModel>> GetFieldTypesAsync();

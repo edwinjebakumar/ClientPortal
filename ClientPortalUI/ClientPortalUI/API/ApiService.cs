@@ -34,6 +34,21 @@ namespace ClientPortalUI.API
                 _logger.LogError(ex, "Error retrieving form assignments for client {ClientId}", clientId);
                 throw new ApplicationException("Error retrieving form assignments.", ex);
             }
+        }        // Retrieves a specific form assignment by assignment ID
+        public async Task<FormAssignmentViewModel> GetFormAssignmentAsync(int assignmentId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"FormAssignments/assignment/{assignmentId}";
+            try
+            {
+                var assignment = await client.GetFromJsonAsync<FormAssignmentViewModel>(endpoint);
+                return assignment ?? new FormAssignmentViewModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving form assignment {AssignmentId}", assignmentId);
+                throw new ApplicationException("Error retrieving form assignment.", ex);
+            }
         }
 
         // Retrieves details about a form template (including its fields) using the assignment identifier.
@@ -51,16 +66,18 @@ namespace ClientPortalUI.API
                 _logger.LogError(ex, "Error retrieving form template {AssignmentId}", assignmentId);
                 throw new ApplicationException("Error retrieving form template.", ex);
             }
-        }
-
+        }        
+        
         // Submits a form submission
         public async Task<SubmissionResponseViewModel> SubmitFormAsync(SubmissionViewModel submission)
         {
             var client = _httpClientFactory.CreateClient("ApiClient");
-            var endpoint = "Submissions";
+            var endpoint = "Submissions";  // Added 'api/' prefix
             try
-            {
-                var response = await client.PostAsJsonAsync(endpoint, submission);
+            {                
+                var submissionRequest = submission;
+
+                var response = await client.PostAsJsonAsync(endpoint, submissionRequest);
                 if (response.IsSuccessStatusCode)
                 {
                     var submissionResponse = await response.Content.ReadFromJsonAsync<SubmissionResponseViewModel>();
@@ -78,6 +95,23 @@ namespace ClientPortalUI.API
             {
                 _logger.LogError(ex, "Error submitting form");
                 throw new ApplicationException("Error submitting form.", ex);
+            }
+        }
+
+        // Retrieves the latest submission for a given assignment
+        public async Task<SubmissionResponseViewModel?> GetLatestSubmissionAsync(int assignmentId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"Submissions/latest/{assignmentId}";
+            try
+            {
+                var submission = await client.GetFromJsonAsync<SubmissionResponseViewModel>(endpoint);
+                return submission;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving latest submission for assignment {AssignmentId}", assignmentId);
+                return null; // Return null for no submission
             }
         }
 

@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
 namespace ClientPortalUI.Models
-{    public class FormTemplateViewModel
+{    
+    public class FormTemplateViewModel
     {
         public int AssignmentId { get; set; }
         public int TemplateId { get; set; }
@@ -26,7 +27,8 @@ namespace ClientPortalUI.Models
         public int Id { get; set; }
 
         [Required(ErrorMessage = "Field label is required")]
-        [StringLength(100, MinimumLength = 1, ErrorMessage = "Field label must be between 1 and 100 characters")]        public string Label { get; set; } = string.Empty;
+        [StringLength(100, MinimumLength = 1, ErrorMessage = "Field label must be between 1 and 100 characters")]
+        public string Label { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Field type is required")]
         public string FieldTypeName { get; set; } = string.Empty;
@@ -52,14 +54,7 @@ namespace ClientPortalUI.Models
         public int FormAssignmentId { get; set; }
         public string SubmittedByUserId { get; set; } = string.Empty;
         public string DataJson { get; set; } = string.Empty;
-    }
-
-    public class SubmissionResponseViewModel
-    {
-        public int SubmissionId { get; set; }
-        public string DataJson { get; set; } = string.Empty;
-        public DateTime SubmittedAt { get; set; }
-    }
+    }    // Moved to SubmissionModels.cs
 
     public class ActivityHistoryViewModel
     {
@@ -76,6 +71,5 @@ namespace ClientPortalUI.Models
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public int AssignedFormsCount { get; set; }
-    }
-
+    }    // Moved to FillFormViewModel.cs
 }

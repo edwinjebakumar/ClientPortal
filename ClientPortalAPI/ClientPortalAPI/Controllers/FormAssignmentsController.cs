@@ -88,6 +88,47 @@ namespace ClientPortalAPI.Controllers
                 return StatusCode(500, $"Error retrieving form assignments for client {clientId}");
             }
         }
+
+        // GET: api/FormAssignments/assignment/{id}
+        [HttpGet("assignment/{id}")]
+        public async Task<ActionResult<FormAssignmentDTO>> GetAssignmentById(int id)
+        {
+            try
+            {
+                var assignment = await _context.FormAssignments
+                    .Include(a => a.FormTemplate)
+                    .Include(a => a.Submissions)
+                    .FirstOrDefaultAsync(a => a.Id == id);
+
+                if (assignment == null)
+                {
+                    return NotFound($"Assignment with ID {id} not found");
+                }
+
+                var dto = new FormAssignmentDTO
+                {
+                    Id = assignment.Id,
+                    FormTemplateId = assignment.FormTemplateId,
+                    ClientId = assignment.ClientId,
+                    FormTemplateName = assignment.FormTemplate.Name,
+                    Description = assignment.FormTemplate.Description ?? "",
+                    AssignedAt = assignment.AssignedAt,
+                    Status = assignment.Status,
+                    Notes = assignment.Notes,
+                    LastSubmissionDate = assignment.Submissions
+                        .OrderByDescending(s => s.SubmittedAt)
+                        .Select(s => s.SubmittedAt)
+                        .FirstOrDefault()
+                };
+
+                return Ok(dto);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error retrieving form assignment {id}");
+            }
+        }
+
         // POST: api/FormAssignments
         [HttpPost("create")]
         [Authorize(Roles = "Admin")]

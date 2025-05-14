@@ -1,26 +1,126 @@
-﻿@model FormTemplateViewModel
-
-<h2>@Model.Name</h2>
-<form asp-action="SubmitForm" method="post">
-    @foreach (var field in Model.Fields)
+﻿@model FillFormViewModel
+@{    
+    Dictionary<string, string> existingData;
+    try
     {
-        <div class="form-group">
-            <label>@field.Label</label>
-            @* Render the control based on field type *@
-            @switch (field.FieldTypeName)
-            {
-                case "Text":
-                    @Html.TextBox(field.Label, null, new { @class = "form-control" })
-                    break;
-                case "Dropdown":
-                    @Html.DropDownList(field.Label, new SelectList(field.Options.Split(',')), new { @class = "form-control" })
-                    break;
-                default:
-                    @Html.TextBox(field.Label, null, new { @class = "form-control" })
-                    break;
-            }
+        existingData = !string.IsNullOrEmpty(Model.ExistingDataJson) ? 
+            System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(Model.ExistingDataJson) ?? 
+            new Dictionary<string, string>() : 
+            new Dictionary<string, string>();
+    }
+    catch
+    {
+        existingData = new Dictionary<string, string>();
+    }
+}
+
+<div class="container mt-4">
+    <h2>@Model.FormName</h2>
+    <p class="text-muted">@Model.Description</p>
+
+    @if (Model.LastSubmissionDate.HasValue)
+    {
+        <div class="alert alert-info">
+            Last submitted on: @Model.LastSubmissionDate.Value.ToLocalTime().ToString("g")
         </div>
     }
-    <input type="hidden" name="AssignmentId" value="@Model.AssignmentId" />
-    <button type="submit" class="btn btn-primary">Submit Form</button>
-</form>
+
+    <div class="card">
+        <div class="card-body">
+            <form asp-action="SubmitForm" method="post">
+                @foreach (var field in Model.Fields.OrderBy(f => f.FieldOrder))
+                {
+                    <div class="form-group mb-3">
+                        <label class="form-label">
+                            @field.Label
+                            @if (field.IsRequired)
+                            {
+                                <span class="text-danger">*</span>
+                            }
+                        </label>
+
+                        @{
+                            var value = existingData.ContainsKey(field.Label) ? existingData[field.Label] : field.Value;
+                        }
+
+                        @switch (field.FieldTypeName.ToLower())
+                        {
+                            case "text":
+                                <input type="text" name="@field.Label" value="@value" 
+                                       class="form-control" 
+                                       @(field.IsRequired ? "required" : "") />
+                                break;
+
+                            case "textarea":
+                                <textarea name="@field.Label" class="form-control" rows="3"
+                                          @(field.IsRequired ? "required" : "")>@value</textarea>
+                                break;
+
+                            case "number":
+                                <input type="number" name="@field.Label" value="@value" 
+                                       class="form-control" 
+                                       @(field.IsRequired ? "required" : "") />
+                                break;
+
+                            case "date":
+                                <input type="date" name="@field.Label" value="@value" 
+                                       class="form-control" 
+                                       @(field.IsRequired ? "required" : "") />
+                                break;
+
+                            case "dropdown":
+                                <select name="@field.Label" class="form-control" @(field.IsRequired ? "required" : "")>
+                                    <option value="">-- Select --</option>
+                                    @foreach (var option in field.Options.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                    {
+                                        <option value="@option.Trim()" selected="@(value == option.Trim())">@option.Trim()</option>
+                                    }
+                                </select>
+                                break;
+
+                            case "checkbox":
+                                <div class="form-check">
+                                    <input type="checkbox" name="@field.Label" value="true" 
+                                           class="form-check-input" 
+                                           @(value == "true" ? "checked" : "")
+                                           @(field.IsRequired ? "required" : "") />
+                                    <label class="form-check-label">@field.Label</label>
+                                </div>
+                                break;
+
+                            default:
+                                <input type="text" name="@field.Label" value="@value" 
+                                       class="form-control" 
+                                       @(field.IsRequired ? "required" : "") />
+                                break;
+                        }
+
+                        @if (!string.IsNullOrEmpty(field.ValidationMessage))
+                        {
+                            <div class="text-danger">@field.ValidationMessage</div>
+                        }
+                    </div>
+                }
+
+                <input type="hidden" name="assignmentId" value="@Model.AssignmentId" />
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a asp-action="ClientDashboard" class="btn btn-secondary">Back to Dashboard</a>
+                    <button type="submit" class="btn btn-primary">Submit Form</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Add any client-side validation or dynamic form behavior here
+        $(document).ready(function() {
+            $('form').on('submit', function() {
+                // Disable submit button to prevent double submission
+                $(this).find('button[type="submit"]').prop('disabled', true);
+            });
+        });
+    </script>
+}

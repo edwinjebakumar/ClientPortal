@@ -8,7 +8,9 @@
         public DateTime AssignedAt { get; set; }
         public string Status { get; set; } = "Pending";
         public bool HasSubmission { get; set; }
+
+        public DateTime LastSubmissionDate { get; set; }
         public int ClientId { get; set; }
-        public int TemplateId { get; set; }
+        public int FormTemplateId { get; set; }
     }
 }
