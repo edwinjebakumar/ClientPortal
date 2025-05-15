@@ -15,7 +15,7 @@ namespace ClientPortalUI.Models
     }    public class FormFieldValueViewModel : FormFieldViewModel
     {
         // Only add new properties, inherit the rest from FormFieldViewModel
-        public new string? Value { get; set; }
+        public string? Value { get; set; }
         public string? ValidationMessage { get; set; }
     }
 }

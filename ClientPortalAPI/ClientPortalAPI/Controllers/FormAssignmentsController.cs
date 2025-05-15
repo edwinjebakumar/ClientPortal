@@ -40,10 +40,9 @@ namespace ClientPortalAPI.Controllers
                     .ToListAsync();
 
                 return Ok(dtoList);
-            }
-            catch (Exception ex)
+            }            catch (Exception ex)
             {
-                return StatusCode(500, "Error retrieving form assignments");
+                return StatusCode(500, $"Error retrieving form assignments: {ex.Message}");
             }
         }
 
@@ -82,10 +81,9 @@ namespace ClientPortalAPI.Controllers
                     .ToListAsync();
 
                 return Ok(assignments);
-            }
-            catch (Exception ex)
+            }            catch (Exception ex)
             {
-                return StatusCode(500, $"Error retrieving form assignments for client {clientId}");
+                return StatusCode(500, $"Error retrieving form assignments for client {clientId}: {ex.Message}");
             }
         }
 
@@ -122,10 +120,9 @@ namespace ClientPortalAPI.Controllers
                 };
 
                 return Ok(dto);
-            }
-            catch (Exception ex)
+            }            catch (Exception ex)
             {
-                return StatusCode(500, $"Error retrieving form assignment {id}");
+                return StatusCode(500, $"Error retrieving form assignment {id}: {ex.Message}");
             }
         }
 

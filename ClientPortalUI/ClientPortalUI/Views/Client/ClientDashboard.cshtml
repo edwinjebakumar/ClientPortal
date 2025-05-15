@@ -47,34 +47,34 @@
                                 <span class="badge bg-@GetStatusBadgeColor(form.Status)">@form.Status</span>
                             </div>
                             
-                            @if (!string.IsNullOrEmpty(form.Description))
+                @if (!string.IsNullOrEmpty(form.Description))
                             {
-                                <p class="card-text text-muted">@form.Description</p>
+                                <p class="card-text text-muted mb-3">@form.Description</p>
                             }
-                            
-                            <p class="card-text">
+
+                            @if (form.LastSubmissionDate.HasValue)
+                            {
+                                <p class="card-text">
+                                    <small class="text-muted">
+                                        Last submitted: @form.LastSubmissionDate.Value.ToShortDateString()
+                                    </small>
+                                </p>
+                            }                            <p class="card-text">
                                 <small class="text-muted">
                                     <i class="bi bi-calendar me-1"></i>
                                     Assigned on @form.AssignedAt.ToString("MMM dd, yyyy")
                                 </small>
                             </p>
-                        </div>
-                        <div class="card-footer bg-transparent border-top-0">
-                            <div class="d-grid">
-                                @if (form.Status.ToLower() != "completed")
-                                {
-                                    <a href="@Url.Action("FillForm", "Client", new { assignmentId = form.Id })" 
-                                       class="btn btn-primary">
-                                        <i class="bi bi-pencil-square me-2"></i>Fill Form
-                                    </a>
-                                }
-                                else
-                                {
-                                    <a href="@Url.Action("ViewSubmission", "Client", new { assignmentId = form.Id })" 
-                                       class="btn btn-outline-primary">
-                                        <i class="bi bi-eye me-2"></i>View Submission
-                                    </a>
-                                }
+
+                            <div class="d-flex justify-content-between gap-2 mt-3">
+                                <a href="@Url.Action("FillForm", "Client", new { assignmentId = form.Id })" 
+                                   class="btn btn-primary flex-grow-1">
+                                    <i class="bi bi-pencil-square"></i> Fill Form
+                                </a>
+                                <a href="@Url.Action("ViewSubmissions", "Client", new { assignmentId = form.Id })" 
+                                   class="btn btn-outline-info flex-grow-1">
+                                    <i class="bi bi-clock-history"></i> View History
+                                </a>
                             </div>
                         </div>
                     </div>

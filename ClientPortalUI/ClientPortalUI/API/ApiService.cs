@@ -382,5 +382,41 @@ namespace ClientPortalUI.API
                 throw new ApplicationException("Error assigning form template.", ex);
             }
         }
+
+        public async Task<List<SubmissionResponseViewModel>> GetSubmissionsByAssignmentIdAsync(int assignmentId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"Submissions/byAssignment/{assignmentId}";
+            try
+            {
+                var submissions = await client.GetFromJsonAsync<List<SubmissionResponseViewModel>>(endpoint);
+                return submissions ?? new List<SubmissionResponseViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submissions for assignment {AssignmentId}", assignmentId);
+                throw new ApplicationException("Error retrieving submissions.", ex);
+            }
+        }
+
+        public async Task<SubmissionResponseViewModel> GetSubmissionDetailsAsync(int submissionId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            var endpoint = $"Submissions/details/{submissionId}";
+            try
+            {
+                var submission = await client.GetFromJsonAsync<SubmissionResponseViewModel>(endpoint);
+                if (submission == null)
+                {
+                    throw new ApplicationException($"Submission {submissionId} not found.");
+                }
+                return submission;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submission details for {SubmissionId}", submissionId);
+                throw new ApplicationException("Error retrieving submission details.", ex);
+            }
+        }
     }
 }

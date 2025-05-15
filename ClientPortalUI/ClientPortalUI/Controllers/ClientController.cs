@@ -162,5 +162,49 @@ namespace ClientPortalUI.Controllers
                 return RedirectToAction("ClientDashboard");
             }
         }
+
+        public async Task<IActionResult> ViewSubmissions(int assignmentId)
+        {
+            try
+            {
+                var submissions = await _apiService.GetSubmissionsByAssignmentIdAsync(assignmentId);
+                if (submissions == null)
+                {
+                    return NotFound($"No submissions found for assignment {assignmentId}");
+                }
+
+                ViewBag.AssignmentId = assignmentId;
+                return View(submissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submissions for assignment {AssignmentId}", assignmentId);
+                TempData["ErrorMessage"] = "Failed to retrieve submission history.";
+                return RedirectToAction("ClientDashboard");
+            }
+        }
+
+        public async Task<IActionResult> ViewSubmissionDetails(int id)
+        {
+            try
+            {
+                var submission = await _apiService.GetSubmissionDetailsAsync(id);
+                var activities = await _apiService.GetActivityHistoryBySubmissionAsync(id);
+
+                var viewModel = new ViewSubmissionDetailsViewModel
+                {
+                    Submission = submission,
+                    ActivityHistory = activities
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submission details for {SubmissionId}", id);
+                TempData["ErrorMessage"] = "Failed to retrieve submission details.";
+                return RedirectToAction("ClientDashboard");
+            }
+        }
     }
 }

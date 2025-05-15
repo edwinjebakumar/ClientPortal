@@ -100,6 +100,64 @@ namespace ClientPortalAPI.Controllers
 
         }
 
+        // GET: api/Submissions/byAssignment/{assignmentId}
+        [HttpGet("byAssignment/{assignmentId}")]
+        public async Task<ActionResult<IEnumerable<SubmissionResponseDTO>>> GetSubmissionsByAssignment(int assignmentId)
+        {
+            try
+            {
+                var submissions = await _context.Submissions
+                    .Where(s => s.FormAssignmentId == assignmentId)
+                    .OrderByDescending(s => s.SubmittedAt)
+                    .Select(s => new SubmissionResponseDTO
+                    {
+                        SubmissionId = s.Id,
+                        DataJson = s.DataJson,
+                        SubmittedAt = s.SubmittedAt
+                    })
+                    .ToListAsync();
+
+                return Ok(submissions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submissions for assignment {AssignmentId}", assignmentId);
+                return StatusCode(500, "Error retrieving submissions");
+            }
+        }
+
+        // GET: api/Submissions/details/{id}
+        [HttpGet("details/{id}")]
+        public async Task<ActionResult<SubmissionResponseDTO>> GetSubmissionDetails(int id)
+        {
+            try
+            {
+                var submission = await _context.Submissions
+                    .Include(s => s.FormAssignment)
+                    .ThenInclude(fa => fa.FormTemplate)
+                    .Where(s => s.Id == id)
+                    .Select(s => new SubmissionResponseDTO
+                    {
+                        SubmissionId = s.Id,
+                        DataJson = s.DataJson,
+                        SubmittedAt = s.SubmittedAt
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (submission == null)
+                {
+                    return NotFound($"Submission with ID {id} not found");
+                }
+
+                return Ok(submission);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving submission details for {SubmissionId}", id);
+                return StatusCode(500, "Error retrieving submission details");
+            }
+        }
+
         private async Task LogActivity(int submissionId, string userId, string actionType, string dataSnapshot, string description)
         {
             var activity = new ActivityHistory

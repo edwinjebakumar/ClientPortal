@@ -1,0 +1,123 @@
+@model ViewSubmissionDetailsViewModel
+@{
+    ViewData["Title"] = "Submission Details";
+    var formData = !string.IsNullOrEmpty(Model.Submission?.DataJson) ? 
+        System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(Model.Submission.DataJson) :
+        new Dictionary<string, string>();
+}
+
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-0">Submission Details</h2>
+                    <p class="text-muted mb-0">
+                        Submitted on @Model.Submission.SubmittedAt.ToLocalTime().ToString("MMMM dd, yyyy h:mm tt")
+                    </p>
+                </div>
+                <div>
+                    <a href="javascript:history.back()" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Form Data</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <tbody>
+                                @foreach (var field in formData)
+                                {
+                                    <tr>
+                                        <th style="width: 30%">@field.Key</th>
+                                        <td>@field.Value</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Activity History</h5>
+                </div>
+                <div class="card-body">
+                    @if (!Model.ActivityHistory.Any())
+                    {
+                        <p class="text-muted mb-0">No activity history available.</p>
+                    }
+                    else
+                    {
+                        <div class="timeline">
+                            @foreach (var activity in Model.ActivityHistory.OrderByDescending(a => a.PerformedAt))
+                            {
+                                <div class="timeline-item">
+                                    <div class="timeline-marker"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="mb-0">@activity.ActionType</h6>
+                                        <p class="text-muted mb-0">
+                                            <small>@activity.PerformedAt.ToLocalTime().ToString("g")</small>
+                                        </p>
+                                        <p class="mb-0">@activity.Description</p>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .timeline {
+            position: relative;
+            padding: 1rem 0;
+        }
+
+        .timeline:before {
+            content: '';
+            position: absolute;
+            left: 1rem;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: #e9ecef;
+        }
+
+        .timeline-item {
+            position: relative;
+            padding: 1rem 1rem 1rem 3rem;
+            border-left: 2px solid transparent;
+        }
+
+        .timeline-marker {
+            position: absolute;
+            left: calc(1rem - 5px);
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #6c757d;
+            border: 2px solid #fff;
+        }
+
+        .timeline-content {
+            padding: 0.5rem 0;
+        }
+    </style>
+}

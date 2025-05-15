@@ -23,5 +23,7 @@ namespace ClientPortalUI.API
         Task<bool> UpdateClientAsync(ClientViewModel client);
         Task<bool> DeleteClientAsync(int id);
         Task<bool> AssignFormTemplateAsync(int clientId, int formTemplateId, string notes);
+        Task<List<SubmissionResponseViewModel>> GetSubmissionsByAssignmentIdAsync(int assignmentId);
+        Task<SubmissionResponseViewModel> GetSubmissionDetailsAsync(int submissionId);
     }
 }

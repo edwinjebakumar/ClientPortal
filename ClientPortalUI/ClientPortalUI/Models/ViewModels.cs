@@ -60,6 +60,7 @@ namespace ClientPortalUI.Models
     {
         public int Id { get; set; }
         public int SubmissionId { get; set; }
+        public string PerformedByUserId { get; set; } = string.Empty;
         public string ActionType { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public string DataSnapshot { get; set; } = string.Empty;
@@ -72,4 +73,10 @@ namespace ClientPortalUI.Models
         public string Name { get; set; } = string.Empty;
         public int AssignedFormsCount { get; set; }
     }    // Moved to FillFormViewModel.cs
+
+    public class ViewSubmissionDetailsViewModel
+    {
+        public SubmissionResponseViewModel Submission { get; set; } = new();
+        public List<ActivityHistoryViewModel> ActivityHistory { get; set; } = new();
+    }
 }
