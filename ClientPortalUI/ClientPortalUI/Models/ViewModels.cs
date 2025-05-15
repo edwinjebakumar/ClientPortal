@@ -59,12 +59,11 @@ namespace ClientPortalUI.Models
     public class ActivityHistoryViewModel
     {
         public int Id { get; set; }
-        public int SubmissionId { get; set; }
-        public string PerformedByUserId { get; set; } = string.Empty;
-        public string ActionType { get; set; } = string.Empty;
+        public string ActivityType { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
         public string Description { get; set; } = string.Empty;
-        public string DataSnapshot { get; set; } = string.Empty;
-        public DateTime PerformedAt { get; set; }
+        public string UserId { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
     }
 
     public class ClientViewModel

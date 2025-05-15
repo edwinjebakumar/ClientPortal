@@ -1,4 +1,5 @@
 @model FormTemplateViewModel
+@using ClientPortalUI.Helpers
 @{
     ViewData["Title"] = "Edit Form Template";
 }
@@ -23,7 +24,7 @@
                                 <div class="field-type-item mb-2" data-field-type="@fieldType.Name">
                                     <div class="card">
                                         <div class="card-body py-2 px-3">
-                                            <i class="bi @GetFieldTypeIcon(fieldType.Name)"></i>
+                                            <i class="bi @ViewHelpers.GetFieldTypeIcon(fieldType.Name)"></i>
                                             <span class="ms-2">@fieldType.Name</span>
                                         </div>
                                     </div>
@@ -60,240 +61,216 @@
                     </div>
                     <div class="card-body">
                         <div id="formFields" class="form-fields-list form-building-area">
-                @for (var i = 0; i < Model.Fields.Count; i++)
-                {
-                    <div class="list-group-item field-item" data-field-index="@i">
-                        <div class="row g-3">
-                            <input type="hidden" asp-for="Fields[i].Id" />
-                            
-                            <div class="col-md-4">
-                                <label asp-for="Fields[i].Label" class="form-label">Label</label>
-                                <input asp-for="Fields[i].Label" class="form-control" required />
-                                <span asp-validation-for="Fields[i].Label" class="text-danger"></span>
-                            </div>
+                            @for (int i = 0; i < Model.Fields.Count; i++)
+                            {
+                                <div class="field-item card mb-3" data-field-type="@Model.Fields[i].FieldTypeName">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-3">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-grip-vertical handle me-2"></i>
+                                                <i class="bi @ViewHelpers.GetFieldTypeIcon(Model.Fields[i].FieldTypeName) me-2"></i>
+                                                <h6 class="mb-0">@Model.Fields[i].FieldTypeName Field</h6>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger remove-field">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
 
-                            <div class="col-md-3">
-                                <label asp-for="Fields[i].FieldTypeName" class="form-label">Field Type</label>
-                                <select asp-for="Fields[i].FieldTypeName" class="form-select" required>
-                                    <option value="">Select Type</option>
-                                </select>
-                                <span asp-validation-for="Fields[i].FieldTypeName" class="text-danger"></span>
-                            </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="form-group mb-2">
+                                                    <label class="form-label required">Field Label</label>
+                                                    <input type="text" class="form-control" name="Fields[@i].Label" value="@Model.Fields[i].Label" required />
+                                                    <div class="invalid-feedback">Please enter a field label</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <input type="hidden" name="Fields[@i].FieldTypeName" value="@Model.Fields[i].FieldTypeName" />
+                                                <input type="hidden" name="Fields[@i].Id" value="@Model.Fields[i].Id" />
+                                                <input type="hidden" name="Fields[@i].FieldOrder" value="@i" />
+                                                <div class="form-check mt-4">
+                                                    <input type="checkbox" class="form-check-input" name="Fields[@i].IsRequired" value="true" @(Model.Fields[i].IsRequired ? "checked" : "") />
+                                                    <label class="form-check-label">Required Field</label>
+                                                </div>
+                                            </div>
+                                        </div>
 
-                            <div class="col-md-3">
-                                <label asp-for="Fields[i].Options" class="form-label">Options</label>
-                                <input asp-for="Fields[i].Options" class="form-control" />
-                                <span asp-validation-for="Fields[i].Options" class="text-danger"></span>
-                            </div>
-
-                            <div class="col-md-1">
-                                <label asp-for="Fields[i].IsRequired" class="form-label">Required</label>
-                                <div class="form-check mt-2">
-                                    <input asp-for="Fields[i].IsRequired" class="form-check-input" />
+                                        @if (Model.Fields[i].FieldTypeName == "Dropdown")
+                                        {
+                                            <div class="row mt-2">
+                                                <div class="col-12">
+                                                    <div class="form-group">
+                                                        <label class="form-label required">Options (comma-separated)</label>
+                                                        <input type="text" class="form-control" name="Fields[@i].Options" value="@Model.Fields[i].Options" required placeholder="Option1, Option2, Option3" />
+                                                        <div class="invalid-feedback">Please enter options for the dropdown</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    </div>
                                 </div>
-                            </div>
-
-                            <div class="col-md-1">
-                                <label class="form-label">Action</label>
-                                <button type="button" class="btn btn-danger btn-sm delete-field" onclick="removeField(this)">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </div>
+                            }
+                        </div>
+                        <div id="noFieldsMessage" class="alert alert-info @(Model.Fields.Any() ? "d-none" : "")" role="alert">
+                            <i class="bi bi-info-circle-fill me-2"></i>
+                            Drag fields from the left panel to start building your form
                         </div>
                     </div>
-                }
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Save Changes
+                    </button>
+                    <a asp-action="FormTemplates" asp-controller="Admin" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancel
+                    </a>
+                </div>
             </div>
-
-            <button type="button" class="btn btn-secondary" onclick="addNewField()">
-                <i class="bi bi-plus"></i> Add Field
-            </button>
-        </div>
-
-        <div class="mb-3">
-            <a href="@Url.Action("FormTemplates", "Admin")" class="btn btn-secondary">Cancel</a>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
     </form>
 </div>
 
-<!-- Toast Container -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3">
-    @if (TempData["Success"] != null)
-    {
-        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-check-circle me-2"></i> @TempData["Success"]
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    }
-    @if (TempData["Error"] != null)
-    {
-        <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
-            <div class="d-flex">
-                <div class="toast-body">
-                    <i class="bi bi-exclamation-circle me-2"></i> @TempData["Error"]
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-            </div>
-        </div>
-    }
-</div>
+@section Styles {
+    <style>
+        .required:after {
+            content: " *";
+            color: red;
+        }
+        .sticky-panel {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        .field-type-item {
+            cursor: grab;
+        }
+        .field-type-item:active {
+            cursor: grabbing;
+        }
+        .field-item {
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .field-item:hover {
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .field-item .handle {
+            cursor: grab;
+        }
+        .field-item .handle:active {
+            cursor: grabbing;
+        }
+        .sortable-ghost {
+            opacity: 0.5;
+            background-color: #e9ecef;
+        }
+        .field-types-list {
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+        }
+        .form-fields-list {
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+        .form-fields-list.drag-over {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: #007bff;
+        }
+        .sticky-panel {
+            position: sticky;
+            top: 20px;
+            z-index: 1000;
+        }
+        .form-building-area {
+            min-height: 200px;
+            padding: 1rem;
+            border: 2px dashed #ddd;
+            border-radius: 4px;
+        }
+        .form-building-area.drag-over {
+            background-color: rgba(0, 123, 255, 0.05);
+            border-color: #007bff;
+        }
+        .field-item.dragging {
+            opacity: 0.5;
+        }
+    </style>
+}
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <script>
-        let fieldTypes = [];
-        let fieldIndex = @Model.Fields.Count;
-
-        // Fetch field types when the page loads
         $(document).ready(function() {
-            fetchFieldTypes();
-        });
-
-        function fetchFieldTypes() {
-            $.get('@Url.Action("GetFieldTypes", "Admin")', function(data) {
-                fieldTypes = data;
-                populateFieldTypeDropdowns();
+            // Initialize form validation
+            const forms = document.querySelectorAll('.needs-validation');
+            Array.from(forms).forEach(form => {
+                form.addEventListener('submit', event => {
+                    if (!form.checkValidity()) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                    }
+                    form.classList.add('was-validated');
+                }, false);
             });
-        }
 
-        function populateFieldTypeDropdowns() {
-            const options = fieldTypes.map(type => 
-                `<option value="${type.name}">${type.name}</option>`
-            ).join('');
-
-            $('select[name$=".FieldTypeName"]').each(function() {
-                const currentValue = $(this).val();
-                $(this).html('<option value="">Select Type</option>' + options);
-                $(this).val(currentValue);
+            // Initialize drag and drop for available fields
+            const availableFields = document.getElementById('availableFields');
+            new Sortable(availableFields, {
+                group: {
+                    name: 'fields',
+                    pull: 'clone',
+                    put: false
+                },
+                sort: false,
+                animation: 150,
+                onClone: function(evt) {
+                    evt.clone.classList.add('dragging');
+                }
             });
-        }
 
-        function addNewField() {
-            const template = `
-                <div class="list-group-item field-item" data-field-index="${fieldIndex}">
-                    <div class="row g-3">
-                        <input type="hidden" name="Fields[${fieldIndex}].Id" value="0" />
-                        
-                        <div class="col-md-4">
-                            <label class="form-label">Label</label>
-                            <input name="Fields[${fieldIndex}].Label" class="form-control" required />
-                        </div>
+            // Initialize drag and drop for form fields
+            const formFields = document.getElementById('formFields');
+            new Sortable(formFields, {
+                group: {
+                    name: 'fields',
+                    put: true
+                },
+                animation: 150,
+                handle: '.handle',
+                ghostClass: 'sortable-ghost',
+                onAdd: function(evt) {
+                    const item = evt.item;
+                    const fieldType = item.getAttribute('data-field-type');
+                    const newIndex = evt.newIndex;
+                    
+                    // Replace the cloned item with a proper field item
+                    const fieldItem = createFieldItem(fieldType, newIndex);
+                    item.parentNode.replaceChild(fieldItem, item);
+                    updateFieldIndexes();
+                    updateNoFieldsMessage();
+                },
+                onUpdate: function() {
+                    updateFieldIndexes();
+                }
+            });
 
-                        <div class="col-md-3">
-                            <label class="form-label">Field Type</label>
-                            <select name="Fields[${fieldIndex}].FieldTypeName" class="form-select" required>
-                                <option value="">Select Type</option>
-                                ${fieldTypes.map(type => `<option value="${type.name}">${type.name}</option>`).join('')}
-                            </select>
-                        </div>
+            // Event delegation for remove buttons
+            $(document).on('click', '.remove-field', function() {
+                $(this).closest('.field-item').remove();
+                updateFieldIndexes();
+                updateNoFieldsMessage();
+            });
 
-                        <div class="col-md-3">
-                            <label class="form-label">Options</label>
-                            <input name="Fields[${fieldIndex}].Options" class="form-control" />
-                        </div>
-
-                        <div class="col-md-1">
-                            <label class="form-label">Required</label>
-                            <div class="form-check mt-2">
-                                <input type="checkbox" name="Fields[${fieldIndex}].IsRequired" class="form-check-input" />
-                            </div>
-                        </div>
-
-                        <div class="col-md-1">
-                            <label class="form-label">Action</label>
-                            <button type="button" class="btn btn-danger btn-sm delete-field" onclick="removeField(this)">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>`;
-
-            $('#formFields').append(template);
-            fieldIndex++;
-        }
-
-        function removeField(button) {
-            if (confirm('Are you sure you want to remove this field?')) {
-                $(button).closest('.field-item').remove();
-            }
-        }
-
-        // Form validation and submission
-        $('#editTemplateForm').on('submit', function(e) {
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            $(this).addClass('was-validated');
-        });
-
-        // Initialize Sortable for field types (source)
-        new Sortable(document.getElementById('availableFields'), {
-            group: { 
-                name: 'fields',
-                pull: 'clone',
-                put: false
-            },
-            sort: false,
-            animation: 150
-        });
-
-        // Initialize Sortable for form fields (destination)
-        var formFields = document.getElementById('formFields');
-        new Sortable(formFields, {
-            group: {
-                name: 'fields',
-                pull: false
-            },
-            animation: 150,
-            handle: '.handle',
-            onAdd: function (evt) {
-                var itemEl = evt.item;
-                var fieldType = itemEl.getAttribute('data-field-type');
-                var newIndex = evt.newIndex;
+            function createFieldItem(fieldType, index) {
+                const div = document.createElement('div');
+                div.className = 'field-item card mb-3';
+                div.setAttribute('data-field-type', fieldType);
                 
-                itemEl.outerHTML = createFieldHtml(fieldType, newIndex);
-                updateFieldOrders();
-            },
-            onSort: function (evt) {
-                updateFieldOrders();
-            }
-        });
-
-        function updateFieldOrders() {
-            var fields = document.querySelectorAll('#formFields .field-item');
-            fields.forEach((field, index) => {
-                var orderInput = field.querySelector('input[name$="].FieldOrder"]');
-                if (orderInput) {
-                    orderInput.value = index;
-                }
-                updateFieldInputs(field, index);
-            });
-        }
-
-        function updateFieldInputs(fieldElement, index) {
-            var inputs = fieldElement.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                var name = input.getAttribute('name');
-                if (name) {
-                    input.setAttribute('name', name.replace(/Fields\[\d+\]/, `Fields[${index}]`));
-                }
-            });
-        }
-
-        function createFieldHtml(fieldType, index) {
-            // Keep any existing field ID if this is a reorder
-            var existingId = '';
-            var existingField = document.querySelector(`[name="Fields[${index}].Id"]`);
-            if (existingField) {
-                existingId = `<input type="hidden" name="Fields[${index}].Id" value="${existingField.value}" />`;
-            }
-
-            return `
-                <div class="field-item card mb-3" data-field-type="${fieldType}">
+                div.innerHTML = `
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-3">
                             <div class="d-flex align-items-center">
@@ -310,13 +287,13 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-2">
                                     <label class="form-label required">Field Label</label>
-                                    ${existingId}
                                     <input type="text" class="form-control" name="Fields[${index}].Label" required />
                                     <div class="invalid-feedback">Please enter a field label</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <input type="hidden" name="Fields[${index}].FieldTypeName" value="${fieldType}" />
+                                <input type="hidden" name="Fields[${index}].Id" value="0" />
                                 <input type="hidden" name="Fields[${index}].FieldOrder" value="${index}" />
                                 <div class="form-check mt-4">
                                     <input type="checkbox" class="form-check-input" name="Fields[${index}].IsRequired" value="true" />
@@ -326,131 +303,58 @@
                         </div>
 
                         ${fieldType === 'Dropdown' ? `
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <div class="form-group">
-                                    <label class="form-label required">Options (comma-separated)</label>
-                                    <input type="text" class="form-control" name="Fields[${index}].Options" required />
-                                    <div class="invalid-feedback">Please enter options for the dropdown</div>
+                            <div class="row mt-2">
+                                <div class="col-12">
+                                    <div class="form-group">
+                                        <label class="form-label required">Options (comma-separated)</label>
+                                        <input type="text" class="form-control" name="Fields[${index}].Options" required placeholder="Option1, Option2, Option3" />
+                                        <div class="invalid-feedback">Please enter options for the dropdown</div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
                         ` : ''}
                     </div>
-                </div>
-            `;
-        }
+                `;
+                
+                return div;
+            }
 
-        // Handle remove field with confirmation
-        document.addEventListener('click', function(e) {
-            if (e.target.closest('.remove-field')) {
-                e.preventDefault();
-                if (confirm('Are you sure you want to remove this field? This action cannot be undone.')) {
-                    var fieldItem = e.target.closest('.field-item');
-                    fieldItem.remove();
-                    updateFieldOrders();
+            function updateFieldIndexes() {
+                $('.field-item').each(function(index) {
+                    // Update all input names and values that contain the index
+                    $(this).find('input, select').each(function() {
+                        const name = $(this).attr('name');
+                        if (name) {
+                            const newName = name.replace(/Fields\[\d+\]/, `Fields[${index}]`);
+                            $(this).attr('name', newName);
+                        }
+                        if ($(this).attr('name') === `Fields[${index}].FieldOrder`) {
+                            $(this).val(index);
+                        }
+                    });
+                });
+            }
+
+            function updateNoFieldsMessage() {
+                const hasFields = $('.field-item').length > 0;
+                $('#noFieldsMessage').toggleClass('d-none', hasFields);
+            }            function getFieldTypeIcon(fieldType) {
+                switch(fieldType?.toLowerCase()) {
+                    case 'text': return 'bi-text-left';
+                    case 'number': return 'bi-123';
+                    case 'email': return 'bi-envelope';
+                    case 'date': return 'bi-calendar';
+                    case 'checkbox': return 'bi-check-square';
+                    case 'dropdown': return 'bi-list';
+                    case 'textarea': return 'bi-textarea-t';
+                    default: return 'bi-input-cursor-text';
                 }
             }
         });
 
         // Initialize toasts
-        var toastElList = [].slice.call(document.querySelectorAll('.toast'))
-        var toastList = toastElList.map(function (toastEl) {
-            return new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 })
-        });
+        const toastElList = document.querySelectorAll('.toast');
+        const toastList = [...toastElList].map(toastEl => new bootstrap.Toast(toastEl, { autohide: true }));
         toastList.forEach(toast => toast.show());
-
-        // Form validation
-        document.getElementById('formTemplateForm').addEventListener('submit', function(event) {
-            if (!this.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-
-            var fields = document.querySelectorAll('#formFields .field-item');
-            if (fields.length === 0) {
-                event.preventDefault();
-                alert('Please add at least one field to the form template.');
-            }
-
-            this.classList.add('was-validated');
-        });
-
-        // Helper function to get field type icon
-        function getFieldTypeIcon(fieldType) {
-            switch (fieldType.toLowerCase()) {
-                case 'text': return 'bi-input-cursor-text';
-                case 'number': return 'bi-123';
-                case 'date': return 'bi-calendar';
-                case 'dropdown': return 'bi-list';
-                case 'checkbox': return 'bi-check-square';
-                case 'file': return 'bi-file-earmark';
-                default: return 'bi-square';
-            }
-        }
     </script>
-}
-
-@section Styles {
-    <style>
-        .sticky-panel {
-            position: sticky;
-            top: 20px;
-            max-height: calc(100vh - 40px);
-            overflow-y: auto;
-        }
-
-        .field-types-list {
-            max-height: calc(100vh - 200px);
-            overflow-y: auto;
-        }
-
-        .handle {
-            cursor: grab;
-        }
-
-        .handle:active {
-            cursor: grabbing;
-        }
-
-        .field-type-item {
-            cursor: grab;
-        }
-
-        .field-type-item:active {
-            cursor: grabbing;
-        }
-
-        .form-building-area {
-            min-height: 200px;
-            padding: 1rem;
-            border: 2px dashed #ddd;
-            border-radius: 4px;
-        }
-
-        .form-building-area.drag-over {
-            background-color: rgba(0, 123, 255, 0.05);
-            border-color: #007bff;
-        }
-
-        .field-item.dragging {
-            opacity: 0.5;
-        }
-    </style>
-}
-
-@functions {
-    private string GetFieldTypeIcon(string fieldType)
-    {
-        switch (fieldType.ToLower())
-        {
-            case "text": return "bi-input-cursor-text";
-            case "number": return "bi-123";
-            case "date": return "bi-calendar";
-            case "dropdown": return "bi-list";
-            case "checkbox": return "bi-check-square";
-            case "file": return "bi-file-earmark";
-            default: return "bi-square";
-        }
-    }
 }
