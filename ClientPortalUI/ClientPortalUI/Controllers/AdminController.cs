@@ -466,5 +466,145 @@ namespace ClientPortalUI.Controllers
 
             return RedirectToAction("ClientDashboard", "Client", new { id = clientId });
         }
+
+        // GET: Admin/AssignTemplate/{templateId}
+        public async Task<IActionResult> AssignTemplate(int templateId)
+        {
+            try
+            {
+                var template = await _apiService.GetFormTemplateAsync(templateId);
+                if (template == null)
+                {
+                    return NotFound();
+                }
+
+                var clients = await _apiService.GetClientsAsync();
+                
+                var viewModel = new TemplateAssignmentViewModel
+                {
+                    FormTemplateId = templateId,
+                    TemplateName = template.Name,
+                    AvailableClients = clients
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading template assignment page for template {TemplateId}", templateId);
+                TempData["Error"] = "Error loading template assignment page. Please try again.";
+                return RedirectToAction(nameof(FormTemplates));
+            }
+        }
+
+        // POST: Admin/AssignTemplate
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignTemplate(TemplateAssignmentViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                var clients = await _apiService.GetClientsAsync();
+                model.AvailableClients = clients;
+                return View(model);
+            }
+
+            try
+            {
+                var successCount = 0;
+                foreach (var clientId in model.SelectedClientIds)
+                {
+                    var result = await _apiService.AssignFormTemplateAsync(clientId, model.FormTemplateId, model.Notes);
+                    if (result)
+                    {
+                        successCount++;
+                    }
+                }
+
+                if (successCount > 0)
+                {
+                    TempData["Success"] = $"Template successfully assigned to {successCount} client(s).";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to assign template to any selected clients.";
+                }
+
+                return RedirectToAction(nameof(FormTemplates));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning template {TemplateId} to clients", model.FormTemplateId);
+                TempData["Error"] = "Error assigning template. Please try again.";
+                var clients = await _apiService.GetClientsAsync();
+                model.AvailableClients = clients;
+                return View(model);
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> FormAssignment()
+        {
+            try
+            {
+                var templates = await _apiService.GetFormTemplatesAsync();
+                var clients = await _apiService.GetClientsAsync();
+
+                var viewModel = new FormAssignmentOverviewViewModel
+                {
+                    FormTemplates = templates,
+                    AvailableClients = clients
+                };
+
+                return View(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading form assignment page");
+                TempData["Error"] = "Error loading form assignment page. Please try again.";
+                return RedirectToAction(nameof(AdminDashboard));
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AssignTemplates(FormTemplateAssignmentRequest request)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    TempData["Error"] = "Please check your input and try again.";
+                    return RedirectToAction(nameof(FormAssignment));
+                }
+
+                var successCount = 0;
+                foreach (var clientId in request.SelectedClientIds)
+                {
+                    var result = await _apiService.AssignFormTemplateAsync(clientId, request.FormTemplateId, request.Notes);
+                    if (result)
+                    {
+                        successCount++;
+                    }
+                }
+
+                if (successCount > 0)
+                {
+                    TempData["Success"] = $"Successfully assigned template to {successCount} client(s).";
+                }
+                else
+                {
+                    TempData["Error"] = "Failed to assign template to any selected clients.";
+                }
+
+                return RedirectToAction(nameof(FormAssignment));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error assigning template {TemplateId} to clients", request.FormTemplateId);
+                TempData["Error"] = "Error assigning template to clients. Please try again.";
+                return RedirectToAction(nameof(FormAssignment));
+            }
+        }
     }
 }

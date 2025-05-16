@@ -372,7 +372,7 @@ namespace ClientPortalUI.API
                     Notes = notes
                 };
 
-                var response = await httpClient.PostAsJsonAsync("FormAssignments", request);
+                var response = await httpClient.PostAsJsonAsync("FormAssignments/assign", request);
                 return response.IsSuccessStatusCode;
             }
             catch (Exception ex)

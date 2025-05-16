@@ -128,7 +128,6 @@ namespace ClientPortalAPI.Controllers
 
         // POST: api/FormAssignments
         [HttpPost("create")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<FormAssignment>> CreateAssignment(FormAssignment assignment)
         {
             // Validate that the same template is not assigned twice for a client
@@ -147,7 +146,6 @@ namespace ClientPortalAPI.Controllers
         }
 
         [HttpPost("assign")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<FormAssignmentDTO>> AssignTemplateToClient(FormAssignmentDTO assignmentDto)
         {
             var assignment = new FormAssignment
