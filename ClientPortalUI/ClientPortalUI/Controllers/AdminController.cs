@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using ClientPortalUI.API;
 using ClientPortalUI.Models;
 using System.Threading.Tasks;
 
 namespace ClientPortalUI.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class AdminController : Controller
     {
         private readonly IApiService _apiService;

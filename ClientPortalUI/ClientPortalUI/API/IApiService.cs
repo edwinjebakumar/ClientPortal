@@ -4,6 +4,9 @@ namespace ClientPortalUI.API
 {
     public interface IApiService
     {
+        Task<AuthResult> LoginAsync(LoginViewModel model);
+        Task<AuthResult> RegisterAsync(RegisterViewModel model);
+
         Task<List<FormAssignmentViewModel>> GetFormAssignmentsAsync(int clientId);
         Task<FormAssignmentViewModel> GetFormAssignmentAsync(int assignmentId);
 
@@ -25,5 +28,6 @@ namespace ClientPortalUI.API
         Task<bool> AssignFormTemplateAsync(int clientId, int formTemplateId, string notes);
         Task<List<SubmissionResponseViewModel>> GetSubmissionsByAssignmentIdAsync(int assignmentId);
         Task<SubmissionResponseViewModel> GetSubmissionDetailsAsync(int submissionId);
+        Task<bool> CheckUsernameAvailabilityAsync(string username);
     }
 }

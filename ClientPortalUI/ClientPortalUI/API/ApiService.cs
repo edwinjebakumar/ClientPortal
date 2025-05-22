@@ -19,6 +19,75 @@ namespace ClientPortalUI.API
             _logger = logger;
         }
 
+        // Authentication Methods
+        public async Task<AuthResult> LoginAsync(LoginViewModel model)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var response = await client.PostAsJsonAsync("Auth/login", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<AuthResult>();
+                    return result ?? new AuthResult { Succeeded = false, Errors = new List<string> { "Invalid response from server" } };
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Login failed. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "Login failed. Please check your credentials." } 
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for user {Email}", model.Email);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "An error occurred during login." } 
+                };
+            }
+        }
+
+        public async Task<AuthResult> RegisterAsync(RegisterViewModel model)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var registerRequest = new
+                {
+                    Email = model.Email,
+                    Password = model.Password,
+                    ConfirmPassword = model.ConfirmPassword,
+                    Roles = new List<string> { "User" }  // Default role for new registrations
+                };
+
+                var response = await client.PostAsJsonAsync("Auth/register", registerRequest);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<AuthResult>();
+                    return result ?? new AuthResult { Succeeded = false, Errors = new List<string> { "Invalid response from server" } };
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("Registration failed. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "Registration failed. Please try again." } 
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during registration for user {Email}", model.Email);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "An error occurred during registration." } 
+                };
+            }
+        }
+
         // Retrieves all form assignments for a given client
         public async Task<List<FormAssignmentViewModel>> GetFormAssignmentsAsync(int clientId)
         {
@@ -417,6 +486,25 @@ namespace ClientPortalUI.API
                 _logger.LogError(ex, "Error retrieving submission details for {SubmissionId}", submissionId);
                 throw new ApplicationException("Error retrieving submission details.", ex);
             }
+        }        // Check username availability
+        public async Task<bool> CheckUsernameAvailabilityAsync(string username)
+        {
+            try
+            {
+                var client = _httpClientFactory.CreateClient("ApiClient");
+                var response = await client.GetFromJsonAsync<AvailabilityResponse>($"Auth/check-username/{username}");
+                return response?.IsAvailable ?? false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error checking username availability");
+                return false;
+            }
+        }
+
+        private class AvailabilityResponse
+        {
+            public bool IsAvailable { get; set; }
         }
     }
 }

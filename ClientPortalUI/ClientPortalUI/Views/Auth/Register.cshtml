@@ -1,0 +1,82 @@
+@model RegisterViewModel
+@{
+    ViewData["Title"] = "Register";
+}
+
+<h1 class="text-center mb-4">@ViewData["Title"]</h1>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">                <form id="registerForm" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="UserName" class="form-control" autocomplete="username" aria-required="true" placeholder="username" />
+                        <label asp-for="UserName">Username</label>
+                        <span asp-validation-for="UserName" class="text-danger"></span>
+                        <div id="usernameAvailability" class="form-text"></div>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Email" class="form-control" autocomplete="email" aria-required="true" placeholder="name@example.com" />
+                        <label asp-for="Email">Email</label>
+                        <span asp-validation-for="Email" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="Password" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                        <label asp-for="Password">Password</label>
+                        <span asp-validation-for="Password" class="text-danger"></span>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input asp-for="ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password" />
+                        <label asp-for="ConfirmPassword">Confirm Password</label>
+                        <span asp-validation-for="ConfirmPassword" class="text-danger"></span>
+                    </div>
+                    <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
+                    <div class="mt-3">
+                        <p>
+                            Already have an account? <a asp-action="Login">Login here</a>
+                        </p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        let usernameCheckTimeout;
+        
+        $(document).ready(function() {
+            $('#UserName').on('input', function() {
+                const username = $(this).val();
+                const $availability = $('#usernameAvailability');
+                
+                // Clear previous timeout
+                clearTimeout(usernameCheckTimeout);
+                
+                // Clear message if empty
+                if (!username) {
+                    $availability.html('');
+                    return;
+                }
+                
+                // Set new timeout
+                usernameCheckTimeout = setTimeout(function() {
+                    $.get('/Auth/CheckUsername/' + encodeURIComponent(username))
+                        .done(function(response) {
+                            if (response.isAvailable) {
+                                $availability.html('<span class="text-success">✓ Username is available</span>');
+                            } else {
+                                $availability.html('<span class="text-danger">✗ Username is already taken</span>');
+                            }
+                        })
+                        .fail(function() {
+                            $availability.html('<span class="text-danger">Error checking username availability</span>');
+                        });
+                }, 500); // Wait 500ms after last keypress
+            });
+        });
+    </script>
+}

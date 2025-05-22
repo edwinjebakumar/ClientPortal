@@ -1,5 +1,6 @@
 using ClientPortalUI.API;
 using System.Net.Http.Headers;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 namespace ClientPortalUI
 {
@@ -12,8 +13,18 @@ namespace ClientPortalUI
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
+            // Configure Authentication
+            builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Auth/Login";
+                    options.LogoutPath = "/Auth/Logout";
+                    options.AccessDeniedPath = "/Auth/AccessDenied";
+                    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+                });
+
             // Configure HttpClient for API communication
-            builder.Services.AddHttpClient("ApiClient", client =>
+            builder.Services.AddHttpClient("ApiClient", (services, client) =>
             {
                 var apiUrl = builder.Configuration.GetValue<string>("ApiSettings:BaseUrl") 
                     ?? "https://localhost:7264/api/";
@@ -21,8 +32,17 @@ namespace ClientPortalUI
                 client.DefaultRequestHeaders.Accept.Clear();
                 client.DefaultRequestHeaders.Accept.Add(
                     new MediaTypeWithQualityHeaderValue("application/json"));
+
+                // Get the current HttpContext to access the authentication token
+                var httpContextAccessor = services.GetRequiredService<IHttpContextAccessor>();
+                var token = httpContextAccessor.HttpContext?.User.FindFirst("Token")?.Value;
+                if (!string.IsNullOrEmpty(token))
+                {
+                    client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                }
             });
 
+            builder.Services.AddHttpContextAccessor();
             builder.Services.AddScoped<IApiService, ApiService>();
 
             // Add logging
@@ -48,6 +68,7 @@ namespace ClientPortalUI
 
             app.UseRouting();
 
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.MapControllerRoute(

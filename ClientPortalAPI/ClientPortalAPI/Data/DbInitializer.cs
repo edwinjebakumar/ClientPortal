@@ -28,14 +28,13 @@ namespace ClientPortalAPI.Data
             var adminEmail = "admin@clientportal.com";
             var adminUser = await userManager.FindByEmailAsync(adminEmail);
             if (adminUser == null)
-            {
-                adminUser = new ApplicationUser
+            {                adminUser = new ApplicationUser
                 {
-                    UserName = "admin",
+                    UserName = adminEmail, // Use email as username for consistency
                     Email = adminEmail,
                     EmailConfirmed = true
                 };
-                await userManager.CreateAsync(adminUser, "Admin@123");
+                await userManager.CreateAsync(adminUser, "Admin@123456"); // Use the same password as in appsettings.json
                 await userManager.AddToRoleAsync(adminUser, adminRole);
             }
 
