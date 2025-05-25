@@ -57,10 +57,12 @@ namespace ClientPortalUI.API
             {
                 var registerRequest = new
                 {
+                    UserName = model.UserName,
                     Email = model.Email,
                     Password = model.Password,
                     ConfirmPassword = model.ConfirmPassword,
-                    Roles = new List<string> { "User" }  // Default role for new registrations
+                    Role = model.Role,
+                    ClientId = model.ClientId
                 };
 
                 var response = await client.PostAsJsonAsync("Auth/register", registerRequest);
@@ -505,6 +507,82 @@ namespace ClientPortalUI.API
         private class AvailabilityResponse
         {
             public bool IsAvailable { get; set; }
+        }
+
+        // User Management Methods
+        public async Task<List<UserViewModel>> GetUsersAsync()
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var users = await client.GetFromJsonAsync<List<UserViewModel>>("Auth/users");
+                return users ?? new List<UserViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving users");
+                return new List<UserViewModel>();
+            }
+        }
+
+        public async Task<UserViewModel> GetUserAsync(string userId)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var user = await client.GetFromJsonAsync<UserViewModel>($"Auth/users/{userId}");
+                return user ?? new UserViewModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user {UserId}", userId);
+                return new UserViewModel();
+            }
+        }
+
+        public async Task<AuthResult> UpdateUserAsync(EditUserViewModel model)
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var response = await client.PutAsJsonAsync($"Auth/users/{model.Id}", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<AuthResult>();
+                    return result ?? new AuthResult { Succeeded = false, Errors = new List<string> { "Invalid response from server" } };
+                }
+
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogError("User update failed. Status: {StatusCode}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "User update failed. Please try again." } 
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", model.Id);
+                return new AuthResult { 
+                    Succeeded = false, 
+                    Errors = new List<string> { "An error occurred during user update." } 
+                };
+            }
+        }
+
+        public async Task<List<RoleViewModel>> GetRolesAsync()
+        {
+            var client = _httpClientFactory.CreateClient("ApiClient");
+            try
+            {
+                var roles = await client.GetFromJsonAsync<List<RoleViewModel>>("Auth/roles");
+                return roles ?? new List<RoleViewModel>();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving roles");
+                return new List<RoleViewModel>();
+            }
         }
     }
 }

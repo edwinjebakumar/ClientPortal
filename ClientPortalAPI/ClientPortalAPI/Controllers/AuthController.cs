@@ -3,9 +3,16 @@ using Microsoft.AspNetCore.Mvc;
 using ClientPortalAPI.DTOs;
 using ClientPortalAPI.Entities;
 using ClientPortalAPI.Services;
+using ClientPortalAPI.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClientPortalAPI.Controllers
 {
+    public class ClientResult
+    {
+        public int Id { get; set; }        public string Name { get; set; } = string.Empty;
+    }
+
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
@@ -16,6 +23,7 @@ namespace ClientPortalAPI.Controllers
         private readonly ITokenService _tokenService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
+        private readonly AuthDbContext _authDbContext;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
@@ -23,7 +31,8 @@ namespace ClientPortalAPI.Controllers
             RoleManager<IdentityRole> roleManager,
             ITokenService tokenService,
             IConfiguration configuration,
-            ILogger<AuthController> logger)
+            ILogger<AuthController> logger,
+            AuthDbContext authDbContext)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -31,6 +40,7 @@ namespace ClientPortalAPI.Controllers
             _tokenService = tokenService;
             _configuration = configuration;
             _logger = logger;
+            _authDbContext = authDbContext;
         }
 
         [HttpGet("check-admin")]
@@ -75,18 +85,19 @@ namespace ClientPortalAPI.Controllers
                     if (!deleteResult.Succeeded)
                     {
                         return BadRequest(new { Message = "Failed to delete existing admin user", Errors = deleteResult.Errors });
-                    }
-                }
+                    }                }
 
-                // Create the Admin role if it doesn't exist                if (!await _roleManager.RoleExistsAsync("Admin"))
+                // Create the Admin role if it doesn't exist
+                if (!await _roleManager.RoleExistsAsync("Admin"))
                 {
                     _logger.LogInformation("Creating Admin role");
-                    var createRoleResult = await _roleManager.CreateAsync(new IdentityRole("Admin"));
-                    if (!createRoleResult.Succeeded)
+                    var createRoleResult = await _roleManager.CreateAsync(new IdentityRole("Admin"));                    if (!createRoleResult.Succeeded)
                     {
                         return BadRequest(new { Message = "Failed to create Admin role", Errors = createRoleResult.Errors });
                     }
-                }                // Create new admin user with consistent username
+                }
+
+                // Create new admin user with consistent username
                 var adminUser = new ApplicationUser
                 {
                     UserName = adminEmail,  // Always use email as username
@@ -131,12 +142,13 @@ namespace ClientPortalAPI.Controllers
 
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponseDTO>> Login(LoginRequestDTO model)
-        {
-            try
-            {
-                _logger.LogInformation("Login attempt for user: {Email}", model.Email);
+        {            try
+            {                _logger.LogInformation("Login attempt for user: {Email}", model.Email);
 
-                var user = await _userManager.FindByEmailAsync(model.Email);
+                // Find user by email
+                var user = await _authDbContext.Users
+                    .FirstOrDefaultAsync(u => u.Email == model.Email);
+
                 if (user == null)
                 {
                     _logger.LogWarning("User not found: {Email}", model.Email);
@@ -182,21 +194,32 @@ namespace ClientPortalAPI.Controllers
                         Succeeded = false,
                         Errors = new List<string> { errorMessage }
                     });
+                }                var roles = await _userManager.GetRolesAsync(user);
+                _logger.LogInformation("User roles for {Email}: {Roles}", 
+                    model.Email, string.Join(", ", roles));                var token = _tokenService.GenerateJwtToken(user, roles);
+
+                // Get client name from ApplicationDbContext if ClientId exists
+                string? clientName = null;
+                if (user.ClientId.HasValue)
+                {
+                    var client = await _authDbContext.Database.SqlQueryRaw<ClientResult>(
+                        "SELECT Id, Name FROM Clients WHERE Id = {0}", user.ClientId.Value)
+                        .FirstOrDefaultAsync();
+                    clientName = client?.Name;
                 }
 
-                var roles = await _userManager.GetRolesAsync(user);
-                _logger.LogInformation("User roles for {Email}: {Roles}", 
-                    model.Email, string.Join(", ", roles));
-
-                var token = _tokenService.GenerateJwtToken(user, roles);
-
-                return Ok(new AuthResponseDTO
+                // Include client information in response
+                var response = new AuthResponseDTO
                 {
                     Succeeded = true,
                     Token = token,
                     Email = user.Email ?? string.Empty,
-                    Roles = roles.ToList()
-                });
+                    Roles = roles.ToList(),
+                    ClientId = user.ClientId,
+                    ClientName = clientName
+                };
+
+                return Ok(response);
             }
             catch (Exception ex)
             {
@@ -220,12 +243,11 @@ namespace ClientPortalAPI.Controllers
                     Succeeded = false,
                     Errors = new List<string> { "Username is already taken." }
                 });
-            }
-
-            var user = new ApplicationUser
+            }            var user = new ApplicationUser
             {
                 UserName = model.UserName,
-                Email = model.Email
+                Email = model.Email,
+                ClientId = model.ClientId
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -238,7 +260,17 @@ namespace ClientPortalAPI.Controllers
                 });
             }
 
-            // Assign roles
+            // Assign role (new approach)
+            if (!string.IsNullOrEmpty(model.Role))
+            {
+                if (!await _roleManager.RoleExistsAsync(model.Role))
+                {
+                    await _roleManager.CreateAsync(new IdentityRole(model.Role));
+                }
+                await _userManager.AddToRoleAsync(user, model.Role);
+            }
+
+            // Legacy support: Assign roles from Roles list
             foreach (var role in model.Roles)
             {
                 if (!await _roleManager.RoleExistsAsync(role))
@@ -373,6 +405,177 @@ namespace ClientPortalAPI.Controllers
             var user = await _userManager.FindByNameAsync(normalizedUsername);
             
             return Ok(new { isAvailable = user == null });
+        }        // User Management Endpoints
+        [HttpGet("users")]
+        public async Task<IActionResult> GetUsers()
+        {
+            try
+            {
+                var users = await _userManager.Users.ToListAsync();
+                var userViewModels = new List<object>();
+                
+                foreach (var user in users)
+                {
+                    var roles = await _userManager.GetRolesAsync(user);
+                    
+                    // Get client name from ApplicationDbContext if ClientId exists
+                    string? clientName = null;
+                    if (user.ClientId.HasValue)
+                    {
+                        var client = await _authDbContext.Database.SqlQueryRaw<ClientResult>(
+                            "SELECT Id, Name FROM Clients WHERE Id = {0}", user.ClientId.Value)
+                            .FirstOrDefaultAsync();
+                        clientName = client?.Name;
+                    }
+                    
+                    userViewModels.Add(new
+                    {
+                        Id = user.Id,
+                        UserName = user.UserName,
+                        Email = user.Email,
+                        Roles = roles,
+                        ClientId = user.ClientId,
+                        ClientName = clientName,
+                        CreatedDate = user.CreatedDate,
+                        IsActive = true // Assuming all users are active for now
+                    });
+                }
+
+                return Ok(userViewModels);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving users");
+                return StatusCode(500, new { Message = "Error retrieving users" });
+            }
+        }
+
+        [HttpGet("users/{userId}")]
+        public async Task<IActionResult> GetUser(string userId)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { Message = "User not found" });
+                }
+
+                var roles = await _userManager.GetRolesAsync(user);
+                
+                // Get client name from ApplicationDbContext if ClientId exists
+                string? clientName = null;
+                if (user.ClientId.HasValue)
+                {
+                    var client = await _authDbContext.Database.SqlQueryRaw<ClientResult>(
+                        "SELECT Id, Name FROM Clients WHERE Id = {0}", user.ClientId.Value)
+                        .FirstOrDefaultAsync();
+                    clientName = client?.Name;
+                }
+                
+                var userViewModel = new
+                {
+                    Id = user.Id,
+                    UserName = user.UserName,
+                    Email = user.Email,
+                    Roles = roles,
+                    ClientId = user.ClientId,
+                    ClientName = clientName,
+                    CreatedDate = user.CreatedDate,
+                    IsActive = true
+                };
+
+                return Ok(userViewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving user {UserId}", userId);
+                return StatusCode(500, new { Message = "Error retrieving user" });
+            }
+        }
+
+        [HttpPut("users/{userId}")]
+        public async Task<IActionResult> UpdateUser(string userId, [FromBody] UpdateUserRequestDTO request)
+        {
+            try
+            {
+                var user = await _userManager.FindByIdAsync(userId);
+                if (user == null)
+                {
+                    return NotFound(new { Message = "User not found" });
+                }
+
+                // Update basic properties
+                user.UserName = request.UserName;
+                user.Email = request.Email;
+                user.ClientId = request.ClientId;
+
+                var updateResult = await _userManager.UpdateAsync(user);
+                if (!updateResult.Succeeded)
+                {
+                    return BadRequest(new AuthResponseDTO
+                    {
+                        Succeeded = false,
+                        Errors = updateResult.Errors.Select(e => e.Description).ToList()
+                    });
+                }
+
+                // Update roles
+                var currentRoles = await _userManager.GetRolesAsync(user);
+                if (currentRoles.Any())
+                {
+                    await _userManager.RemoveFromRolesAsync(user, currentRoles);
+                }
+                
+                if (!string.IsNullOrEmpty(request.Role))
+                {
+                    await _userManager.AddToRoleAsync(user, request.Role);
+                }
+
+                // Update password if provided
+                if (request.ChangePassword && !string.IsNullOrEmpty(request.NewPassword))
+                {
+                    var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var passwordResult = await _userManager.ResetPasswordAsync(user, token, request.NewPassword);
+                    
+                    if (!passwordResult.Succeeded)
+                    {
+                        return BadRequest(new AuthResponseDTO
+                        {
+                            Succeeded = false,
+                            Errors = passwordResult.Errors.Select(e => e.Description).ToList()
+                        });
+                    }
+                }
+
+                return Ok(new AuthResponseDTO { Succeeded = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", userId);
+                return StatusCode(500, new { Message = "Error updating user" });
+            }
+        }
+
+        [HttpGet("roles")]
+        public async Task<IActionResult> GetRoles()
+        {
+            try
+            {
+                var roles = await _roleManager.Roles.ToListAsync();
+                var roleViewModels = roles.Select(r => new
+                {
+                    Name = r.Name,
+                    DisplayName = r.Name // For now, use the same as Name
+                }).ToList();
+
+                return Ok(roleViewModels);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving roles");
+                return StatusCode(500, new { Message = "Error retrieving roles" });
+            }
         }
     }
 }

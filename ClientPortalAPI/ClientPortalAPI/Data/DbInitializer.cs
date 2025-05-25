@@ -15,13 +15,18 @@ namespace ClientPortalAPI.Data
             var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            await context.Database.MigrateAsync();
-
-            // Seed Roles
+            await context.Database.MigrateAsync();            // Seed Roles
             var adminRole = "Admin";
+            var clientRole = "Client";
+            
             if (!await roleManager.RoleExistsAsync(adminRole))
             {
                 await roleManager.CreateAsync(new IdentityRole(adminRole));
+            }
+            
+            if (!await roleManager.RoleExistsAsync(clientRole))
+            {
+                await roleManager.CreateAsync(new IdentityRole(clientRole));
             }
 
             // Seed Admin User
@@ -48,9 +53,7 @@ namespace ClientPortalAPI.Data
                     new FieldType { Name = "Dropdown" }
                 );
                 await context.SaveChangesAsync();
-            }
-
-            // Seed Clients
+            }            // Seed Clients
             var edCorp = new Client { Name = "EdCorp" };
             var emiCorp = new Client { Name = "EmiCorp" };
             var elshaCorp = new Client { Name = "ElshaCorp" };
@@ -59,6 +62,39 @@ namespace ClientPortalAPI.Data
             {
                 context.Clients.AddRange(edCorp, emiCorp, elshaCorp);
                 await context.SaveChangesAsync();
+            }
+            else
+            {
+                // Get existing clients
+                edCorp = context.Clients.First(c => c.Name == "EdCorp");
+                emiCorp = context.Clients.First(c => c.Name == "EmiCorp");
+                elshaCorp = context.Clients.First(c => c.Name == "ElshaCorp");
+            }
+
+            // Seed Client Users
+            var clientUsers = new[]
+            {
+                new { Email = "edcorp@clientportal.com", Password = "EdCorp@123456", Client = edCorp },
+                new { Email = "emicorp@clientportal.com", Password = "EmiCorp@123456", Client = emiCorp },
+                new { Email = "elshacorp@clientportal.com", Password = "ElshaCorp@123456", Client = elshaCorp }
+            };
+
+            foreach (var clientUserInfo in clientUsers)
+            {
+                var existingUser = await userManager.FindByEmailAsync(clientUserInfo.Email);
+                if (existingUser == null)
+                {
+                    var clientUser = new ApplicationUser
+                    {
+                        UserName = clientUserInfo.Email,
+                        Email = clientUserInfo.Email,
+                        EmailConfirmed = true,
+                        ClientId = clientUserInfo.Client.Id
+                    };
+                    
+                    await userManager.CreateAsync(clientUser, clientUserInfo.Password);
+                    await userManager.AddToRoleAsync(clientUser, clientRole);
+                }
             }
 
             // Seed Base Template

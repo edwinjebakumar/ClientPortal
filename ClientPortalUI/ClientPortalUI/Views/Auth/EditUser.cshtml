@@ -1,0 +1,122 @@
+@model EditUserViewModel
+@{
+    ViewData["Title"] = "Edit User";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>@ViewData["Title"]</h1>
+    <a asp-action="ManageUsers" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Users
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-body">
+                <form method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+                    
+                    <input asp-for="Id" type="hidden" />
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input asp-for="UserName" class="form-control" autocomplete="username" aria-required="true" placeholder="username" />
+                                <label asp-for="UserName">Username</label>
+                                <span asp-validation-for="UserName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <input asp-for="Email" class="form-control" autocomplete="email" aria-required="true" placeholder="name@example.com" />
+                                <label asp-for="Email">Email</label>
+                                <span asp-validation-for="Email" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <select asp-for="Role" asp-items="Model.AvailableRoles" class="form-select" aria-required="true">
+                                    <option value="">Select a role</option>
+                                </select>
+                                <label asp-for="Role">Role</label>
+                                <span asp-validation-for="Role" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating mb-3">
+                                <select asp-for="ClientId" asp-items="Model.AvailableClients" class="form-select">
+                                </select>
+                                <label asp-for="ClientId">Client</label>
+                                <span asp-validation-for="ClientId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <div class="form-check">
+                                <input asp-for="ChangePassword" class="form-check-input" type="checkbox" id="changePasswordCheck" />
+                                <label asp-for="ChangePassword" class="form-check-label" for="changePasswordCheck">
+                                    Change Password
+                                </label>
+                            </div>
+                        </div>
+                        <div class="card-body" id="passwordFields" style="display: none;">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <input asp-for="NewPassword" class="form-control" autocomplete="new-password" placeholder="password" />
+                                        <label asp-for="NewPassword">New Password</label>
+                                        <span asp-validation-for="NewPassword" class="text-danger"></span>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-floating mb-3">
+                                        <input asp-for="ConfirmNewPassword" class="form-control" autocomplete="new-password" placeholder="password" />
+                                        <label asp-for="ConfirmNewPassword">Confirm New Password</label>
+                                        <span asp-validation-for="ConfirmNewPassword" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a asp-action="ManageUsers" class="btn btn-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Update User
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            // Toggle password fields based on checkbox
+            $('#changePasswordCheck').change(function() {
+                if ($(this).is(':checked')) {
+                    $('#passwordFields').slideDown();
+                    $('#NewPassword, #ConfirmNewPassword').prop('required', true);
+                } else {
+                    $('#passwordFields').slideUp();
+                    $('#NewPassword, #ConfirmNewPassword').prop('required', false).val('');
+                }
+            });
+
+            // Initialize the state based on current checkbox value
+            if ($('#changePasswordCheck').is(':checked')) {
+                $('#passwordFields').show();
+                $('#NewPassword, #ConfirmNewPassword').prop('required', true);
+            }
+        });
+    </script>
+}

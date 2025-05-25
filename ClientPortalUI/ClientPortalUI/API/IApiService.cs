@@ -7,6 +7,12 @@ namespace ClientPortalUI.API
         Task<AuthResult> LoginAsync(LoginViewModel model);
         Task<AuthResult> RegisterAsync(RegisterViewModel model);
 
+        // User Management
+        Task<List<UserViewModel>> GetUsersAsync();
+        Task<UserViewModel> GetUserAsync(string userId);
+        Task<AuthResult> UpdateUserAsync(EditUserViewModel model);
+        Task<List<RoleViewModel>> GetRolesAsync();
+
         Task<List<FormAssignmentViewModel>> GetFormAssignmentsAsync(int clientId);
         Task<FormAssignmentViewModel> GetFormAssignmentAsync(int assignmentId);
 

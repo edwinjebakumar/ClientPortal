@@ -4,6 +4,8 @@ using ClientPortalUI.API;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace ClientPortalUI.Controllers
 {
@@ -32,8 +34,7 @@ namespace ClientPortalUI.Controllers
             ViewData["ReturnUrl"] = returnUrl;
             if (ModelState.IsValid)
             {
-                var result = await _apiService.LoginAsync(model);
-                if (result.Succeeded)
+                var result = await _apiService.LoginAsync(model);                if (result.Succeeded)
                 {
                     // Create claims for the user
                     var claims = new List<Claim>
@@ -46,6 +47,16 @@ namespace ClientPortalUI.Controllers
                     foreach (var role in result.Roles)
                     {
                         claims.Add(new Claim(ClaimTypes.Role, role));
+                    }
+
+                    // Add client claims if user has a client
+                    if (result.ClientId.HasValue)
+                    {
+                        claims.Add(new Claim("ClientId", result.ClientId.Value.ToString()));
+                        if (!string.IsNullOrEmpty(result.ClientName))
+                        {
+                            claims.Add(new Claim("ClientName", result.ClientName));
+                        }
                     }
 
                     var claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
@@ -64,7 +75,20 @@ namespace ClientPortalUI.Controllers
                     {
                         return Redirect(returnUrl);
                     }
-                    return RedirectToAction("Index", "Home");
+
+                    // Redirect based on user role
+                    if (result.Roles.Contains("Admin"))
+                    {
+                        return RedirectToAction("Index", "Admin");
+                    }
+                    else if (result.Roles.Contains("Client") && result.ClientId.HasValue)
+                    {
+                        return RedirectToAction("Dashboard", "Client", new { clientId = result.ClientId.Value });
+                    }
+                    else
+                    {
+                        return RedirectToAction("Index", "Home");
+                    }
                 }
 
                 foreach (var error in result.Errors)
@@ -77,17 +101,22 @@ namespace ClientPortalUI.Controllers
         }
 
         [HttpGet]
-        public IActionResult Register()
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Register()
         {
-            return View();
+            var model = new RegisterViewModel();
+            await PopulateDropdownsAsync(model);
+            return View(model);
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]        
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
             if (!ModelState.IsValid)
             {
+                await PopulateDropdownsAsync(model);
                 return View(model);
             }
 
@@ -96,12 +125,16 @@ namespace ClientPortalUI.Controllers
             if (!isAvailable)
             {
                 ModelState.AddModelError("UserName", "This username is already taken.");
+                await PopulateDropdownsAsync(model);
                 return View(model);
-            }            var result = await _apiService.RegisterAsync(model);
+            }
+
+            var result = await _apiService.RegisterAsync(model);
             if (result.Succeeded)
             {
-                _logger.LogInformation("User created a new account with password.");
-                return RedirectToAction(nameof(Login));
+                _logger.LogInformation("Admin created a new user account.");
+                TempData["SuccessMessage"] = "User created successfully.";
+                return RedirectToAction(nameof(ManageUsers));
             }
 
             foreach (var error in result.Errors)
@@ -109,7 +142,128 @@ namespace ClientPortalUI.Controllers
                 ModelState.AddModelError(string.Empty, error);
             }
 
+            await PopulateDropdownsAsync(model);
             return View(model);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> ManageUsers()
+        {
+            var users = await _apiService.GetUsersAsync();
+            return View(users);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EditUser(string id)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                return NotFound();
+            }
+
+            var user = await _apiService.GetUserAsync(id);
+            if (user == null || string.IsNullOrEmpty(user.Id))
+            {
+                return NotFound();
+            }
+
+            var model = new EditUserViewModel
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                Email = user.Email,
+                Role = user.Roles.FirstOrDefault() ?? "",
+                ClientId = user.ClientId
+            };
+
+            await PopulateDropdownsAsync(model);
+            return View(model);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EditUser(EditUserViewModel model)
+        {
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdownsAsync(model);
+                return View(model);
+            }
+
+            var result = await _apiService.UpdateUserAsync(model);
+            if (result.Succeeded)
+            {
+                _logger.LogInformation("Admin updated user {UserId}.", model.Id);
+                TempData["SuccessMessage"] = "User updated successfully.";
+                return RedirectToAction(nameof(ManageUsers));
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError(string.Empty, error);
+            }
+
+            await PopulateDropdownsAsync(model);
+            return View(model);
+        }
+
+        private async Task PopulateDropdownsAsync(RegisterViewModel model)
+        {
+            var roles = await _apiService.GetRolesAsync();
+            var clients = await _apiService.GetClientsAsync();
+
+            model.AvailableRoles = roles.Select(r => new SelectListItem
+            {
+                Value = r.Name,
+                Text = r.DisplayName,
+                Selected = r.Name == model.Role
+            }).ToList();
+
+            model.AvailableClients = clients.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = c.Name,
+                Selected = c.Id == model.ClientId
+            }).ToList();
+
+            // Add "No Client" option
+            model.AvailableClients.Insert(0, new SelectListItem
+            {
+                Value = "",
+                Text = "No Client",
+                Selected = !model.ClientId.HasValue
+            });
+        }
+
+        private async Task PopulateDropdownsAsync(EditUserViewModel model)
+        {
+            var roles = await _apiService.GetRolesAsync();
+            var clients = await _apiService.GetClientsAsync();
+
+            model.AvailableRoles = roles.Select(r => new SelectListItem
+            {
+                Value = r.Name,
+                Text = r.DisplayName,
+                Selected = r.Name == model.Role
+            }).ToList();
+
+            model.AvailableClients = clients.Select(c => new SelectListItem
+            {
+                Value = c.Id.ToString(),
+                Text = c.Name,
+                Selected = c.Id == model.ClientId
+            }).ToList();
+
+            // Add "No Client" option
+            model.AvailableClients.Insert(0, new SelectListItem
+            {
+                Value = "",
+                Text = "No Client",
+                Selected = !model.ClientId.HasValue
+            });
         }
 
         [HttpPost]
