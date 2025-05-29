@@ -16,14 +16,14 @@ namespace ClientPortalAPI.Controllers
     [ApiController]
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
-    {
-        private readonly UserManager<ApplicationUser> _userManager;
+    {        private readonly UserManager<ApplicationUser> _userManager;
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly ITokenService _tokenService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<AuthController> _logger;
         private readonly AuthDbContext _authDbContext;
+        private readonly ApplicationDbContext _applicationDbContext;
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
@@ -32,8 +32,8 @@ namespace ClientPortalAPI.Controllers
             ITokenService tokenService,
             IConfiguration configuration,
             ILogger<AuthController> logger,
-            AuthDbContext authDbContext)
-        {
+            AuthDbContext authDbContext,
+            ApplicationDbContext applicationDbContext)        {
             _userManager = userManager;
             _signInManager = signInManager;
             _roleManager = roleManager;
@@ -41,6 +41,7 @@ namespace ClientPortalAPI.Controllers
             _configuration = configuration;
             _logger = logger;
             _authDbContext = authDbContext;
+            _applicationDbContext = applicationDbContext;
         }
 
         [HttpGet("check-admin")]
@@ -202,8 +203,8 @@ namespace ClientPortalAPI.Controllers
                 string? clientName = null;
                 if (user.ClientId.HasValue)
                 {
-                    var client = await _authDbContext.Database.SqlQueryRaw<ClientResult>(
-                        "SELECT Id, Name FROM Clients WHERE Id = {0}", user.ClientId.Value)
+                    var client = await _applicationDbContext.Clients
+                        .Where(c => c.Id == user.ClientId.Value)
                         .FirstOrDefaultAsync();
                     clientName = client?.Name;
                 }

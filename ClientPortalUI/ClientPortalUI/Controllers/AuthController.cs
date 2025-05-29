@@ -74,16 +74,14 @@ namespace ClientPortalUI.Controllers
                     if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
                     {
                         return Redirect(returnUrl);
-                    }
-
-                    // Redirect based on user role
+                    }                    // Redirect based on user role
                     if (result.Roles.Contains("Admin"))
                     {
-                        return RedirectToAction("Index", "Admin");
+                        return RedirectToAction("AdminDashboard", "Admin");
                     }
                     else if (result.Roles.Contains("Client") && result.ClientId.HasValue)
                     {
-                        return RedirectToAction("Dashboard", "Client", new { clientId = result.ClientId.Value });
+                        return RedirectToAction("ClientDashboard", "Client", new { id = result.ClientId.Value });
                     }
                     else
                     {
