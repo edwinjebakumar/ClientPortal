@@ -128,7 +128,7 @@ namespace ClientPortalUI.Controllers
                 if (assignment == null)
                 {
                     TempData["Error"] = "Form assignment not found.";
-                    return RedirectToAction("Dashboard");
+                    return RedirectToAction("ClientDashboard");
                 }
 
                 // Authorization check: Client can only access their own assignments
@@ -140,11 +140,10 @@ namespace ClientPortalUI.Controllers
                         return RedirectToAction("AccessDenied", "Auth");
                     }
                 }
-                var formTemplate = await _apiService.GetFormTemplateAsync(assignment.FormTemplateId);
-                if (formTemplate == null)
+                var formTemplate = await _apiService.GetFormTemplateAsync(assignment.FormTemplateId); if (formTemplate == null)
                 {
                     TempData["Error"] = "Form template not found.";
-                    return RedirectToAction("Dashboard", new { clientId = assignment.ClientId });
+                    return RedirectToAction("ClientDashboard", new { clientId = assignment.ClientId });
                 }
 
                 // Get the latest submission if it exists
@@ -176,7 +175,7 @@ namespace ClientPortalUI.Controllers
             {
                 _logger.LogError(ex, "Error loading form for assignment {AssignmentId}", assignmentId);
                 TempData["Error"] = "Error loading form. Please try again.";
-                return RedirectToAction("Dashboard");
+                return RedirectToAction("ClientDashboard");
             }
         }
 
@@ -221,7 +220,7 @@ namespace ClientPortalUI.Controllers
                 var result = await _apiService.SubmitFormAsync(submission); if (result != null)
                 {
                     TempData["Success"] = "Form submitted successfully!";
-                    return RedirectToAction("Dashboard", new { clientId = assignment.ClientId });
+                    return RedirectToAction("ClientDashboard", new { clientId = assignment.ClientId });
                 }
 
                 TempData["Error"] = "Failed to submit form. Please try again.";
@@ -253,12 +252,10 @@ namespace ClientPortalUI.Controllers
                 // Get the form template and submission data
                 var formTemplate = await _apiService.GetFormTemplateAsync(assignmentId);
                 // Get submission history
-                var history = await _apiService.GetActivityHistoryBySubmissionAsync(assignmentId);
-
-                if (formTemplate == null)
+                var history = await _apiService.GetActivityHistoryBySubmissionAsync(assignmentId); if (formTemplate == null)
                 {
                     TempData["Error"] = "Form not found.";
-                    return RedirectToAction("Dashboard");
+                    return RedirectToAction("ClientDashboard");
                 }
 
                 ViewBag.SubmissionHistory = history;
@@ -268,7 +265,7 @@ namespace ClientPortalUI.Controllers
             {
                 _logger.LogError(ex, "Error loading submission for assignment {AssignmentId}", assignmentId);
                 TempData["Error"] = "Error loading submission. Please try again.";
-                return RedirectToAction("Dashboard");
+                return RedirectToAction("ClientDashboard");
             }
         }
         public async Task<IActionResult> ViewSubmissions(int assignmentId)
@@ -300,7 +297,7 @@ namespace ClientPortalUI.Controllers
             {
                 _logger.LogError(ex, "Error retrieving submissions for assignment {AssignmentId}", assignmentId);
                 TempData["ErrorMessage"] = "Failed to retrieve submission history.";
-                return RedirectToAction("Dashboard");
+                return RedirectToAction("ClientDashboard");
             }
         }
         public async Task<IActionResult> ViewSubmissionDetails(int id)
@@ -334,7 +331,7 @@ namespace ClientPortalUI.Controllers
             {
                 _logger.LogError(ex, "Error retrieving submission details for {SubmissionId}", id);
                 TempData["ErrorMessage"] = "Failed to retrieve submission details.";
-                return RedirectToAction("Dashboard");
+                return RedirectToAction("ClientDashboard");
             }
         }
     }
